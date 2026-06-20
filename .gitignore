@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Runtime data
+data/eduvision.db
+data/*.db
+media/*
+!media/.gitkeep
+
+# Local secrets and credentials
+.env
+*.key
+*.pem
+*service-account*.json
+*credentials*.json
+
+# Logs
+*.log

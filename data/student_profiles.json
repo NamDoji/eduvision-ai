@@ -1,0 +1,15 @@
+{
+  "S001": {
+    "student_id": "S001",
+    "name": "Student A",
+    "grade": "Grade 8",
+    "vision_status": "low vision",
+    "math_level": "weak in geometry",
+    "english_level": "A2",
+    "weaknesses": ["geometry", "charts", "self-study"],
+    "strengths": ["listening", "verbal explanation"],
+    "learning_goal": "understand classroom lessons better",
+    "learning_history": [],
+    "last_activity": null
+  }
+}
