@@ -443,40 +443,44 @@ def web_demo() -> str:
       font-family: Inter, Arial, sans-serif;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--soft); color: var(--ink); }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--soft); color: var(--ink); overflow-x: hidden; }
     header { background: #fff; border-bottom: 1px solid var(--line); }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 20px; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: clamp(14px, 2.4vw, 20px); }
     .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
     .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; color: var(--blue); }
     .mark { width: 38px; height: 38px; border-radius: 8px; background: var(--red); color: #fff; display: grid; place-items: center; font-weight: 900; }
     .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; color: var(--muted); font-size: 14px; background: #fff; }
-    .hero { padding: 28px 20px 12px; }
-    h1 { margin: 0; font-size: clamp(30px, 4vw, 52px); line-height: 1.04; color: var(--blue); letter-spacing: 0; max-width: 860px; }
-    .lead { color: var(--muted); font-size: 18px; line-height: 1.55; max-width: 760px; margin: 14px 0 0; }
-    main { max-width: 1180px; margin: 0 auto; padding: 8px 20px 44px; }
-    .status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0; }
+    .hero { padding: clamp(18px, 3vw, 28px) clamp(14px, 2.4vw, 20px) 12px; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 52px); line-height: 1.06; color: var(--blue); letter-spacing: 0; max-width: 900px; overflow-wrap: anywhere; }
+    .lead { color: var(--muted); font-size: clamp(16px, 1.8vw, 18px); line-height: 1.55; max-width: 800px; margin: 14px 0 0; }
+    main { max-width: 1180px; margin: 0 auto; padding: 8px clamp(14px, 2.4vw, 20px) 44px; }
+    .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; margin: 18px 0; }
     .stat, section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+    .stat, section { min-width: 0; }
     .stat { padding: 14px; min-height: 78px; }
     .stat strong { display: block; color: var(--blue); margin-bottom: 6px; font-size: 13px; text-transform: uppercase; }
     .stat span { color: var(--ink); font-weight: 700; overflow-wrap: anywhere; }
-    .grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 16px; align-items: start; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(360px, .95fr); gap: 16px; align-items: start; }
     section { padding: 18px; margin-bottom: 16px; }
     h2 { margin: 0 0 12px; font-size: 20px; color: var(--blue); }
     h3 { margin: 16px 0 8px; font-size: 15px; color: var(--blue); }
     label { display: block; font-weight: 700; margin: 12px 0 6px; }
     textarea, input, select {
       width: 100%; padding: 12px; border: 1px solid #c7d0dd; border-radius: 6px; font-size: 16px; background: #fff;
+      min-width: 0;
     }
+    input[type="file"] { overflow: hidden; }
     textarea { min-height: 118px; resize: vertical; }
     button {
-      margin-top: 12px; margin-right: 8px; padding: 12px 15px; border: 0; border-radius: 6px;
+      min-height: 44px; margin-top: 12px; margin-right: 0; padding: 12px 15px; border: 0; border-radius: 6px;
       background: var(--red); color: white; font-weight: 800; cursor: pointer;
     }
     button.secondary { background: var(--blue); }
     button.ghost { background: #eef3f8; color: var(--blue); border: 1px solid var(--line); }
     pre {
       white-space: pre-wrap; background: #111827; color: #e8eef8; border-radius: 8px; padding: 16px;
-      min-height: 360px; max-height: 620px; overflow: auto; line-height: 1.45;
+      min-height: 360px; max-height: 620px; overflow: auto; line-height: 1.45; overflow-wrap: anywhere; word-break: break-word;
     }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .row.three { grid-template-columns: 1fr 1fr 1fr; }
@@ -484,11 +488,22 @@ def web_demo() -> str:
     .script li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fbfcfe; color: #344054; }
     .script b { color: var(--red); }
     .muted { color: var(--muted); font-size: 14px; line-height: 1.45; }
-    .actions { display: flex; flex-wrap: wrap; gap: 0; }
-    @media (max-width: 860px) {
-      .grid, .row, .row.three, .status { grid-template-columns: 1fr; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .result-panel { position: sticky; top: 16px; }
+    @media (max-width: 980px) {
+      .grid, .row, .row.three { grid-template-columns: 1fr; }
+      .result-panel { position: static; }
       .topbar { align-items: flex-start; flex-direction: column; }
       button { width: 100%; margin-right: 0; }
+      pre { min-height: 280px; max-height: 460px; }
+    }
+    @media (max-width: 520px) {
+      .brand { font-size: 15px; }
+      .mark { width: 34px; height: 34px; }
+      .badge { font-size: 13px; }
+      section { padding: 14px; }
+      .stat { min-height: 70px; padding: 12px; }
+      pre { min-height: 240px; max-height: 420px; padding: 12px; font-size: 13px; }
     }
   </style>
 </head>
@@ -583,7 +598,7 @@ def web_demo() -> str:
         </section>
       </div>
 
-      <section>
+      <section class="result-panel">
         <h2>Result</h2>
         <pre id="result">Ready for conference demo.</pre>
       </section>
