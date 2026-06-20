@@ -7,3 +7,5 @@ pytesseract==0.3.13
 Pillow==11.0.0
 python-dotenv==1.0.1
 google-cloud-vision==3.8.1
+pytest==8.3.4
+httpx==0.28.1

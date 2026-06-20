@@ -13,6 +13,8 @@ EduVision AI is an OpenClaw-based learning assistant for visually impaired and l
 - Local web demo at `/`
 - Google Vision OCR integration when credentials are configured
 - Tesseract OCR fallback for local image OCR
+- Upload storage in `uploads/`
+- Audio output storage in `audio_outputs/`
 - macOS voice output through `say`
 - Language selector for English/Vietnamese responses and matching TTS voices (`Samantha` for English, `Linh` for Vietnamese)
 - Conference documents: `DEMO_GUIDE.md`, `TECHNICAL_REPORT.md`
@@ -52,6 +54,12 @@ curl -X POST http://127.0.0.1:8010/tts \
 
 curl http://127.0.0.1:8010/report/S001
 curl -X POST http://127.0.0.1:8010/demo/reset
+```
+
+Python tests:
+
+```bash
+pytest
 ```
 
 ## Google Vision

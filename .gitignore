@@ -8,6 +8,10 @@ data/eduvision.db
 data/*.db
 media/*
 !media/.gitkeep
+uploads/*
+!uploads/.gitkeep
+audio_outputs/*
+!audio_outputs/.gitkeep
 
 # Local secrets and credentials
 .env

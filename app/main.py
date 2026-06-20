@@ -23,8 +23,10 @@ PROFILE_FILE = DATA_DIR / "student_profiles.json"
 KB_FILE = DATA_DIR / "knowledge_base.md"
 TRAIN_CSV = DATA_DIR / "train.csv"
 DB_FILE = DATA_DIR / "eduvision.db"
+UPLOAD_DIR = BASE_DIR / "uploads"
+AUDIO_OUTPUT_DIR = BASE_DIR / "audio_outputs"
 MEDIA_DIR = BASE_DIR / "media"
-TTS_DIR = MEDIA_DIR / "tts"
+TTS_DIR = AUDIO_OUTPUT_DIR
 
 app = FastAPI(
     title="EduVision AI Backend",
@@ -93,7 +95,7 @@ def db() -> sqlite3.Connection:
 
 def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     TTS_DIR.mkdir(parents=True, exist_ok=True)
     with db() as conn:
         conn.execute(
@@ -175,6 +177,22 @@ def load_knowledge_chunks() -> List[str]:
     return chunks
 
 
+def sanitize_accessibility_context(text: str) -> str:
+    replacements = {
+        "look at the figure": "use the tactile description",
+        "look at the picture": "use the tactile description",
+        "as shown in the figure": "as described in words",
+        "as shown in the image": "as described in words",
+        "you can see": "you can notice",
+        "nhìn vào hình": "nghe mô tả bằng lời",
+        "như hình vẽ": "như mô tả bằng lời",
+    }
+    cleaned = text
+    for phrase, replacement in replacements.items():
+        cleaned = re.sub(re.escape(phrase), replacement, cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
 def rag_search(query: str, limit: int = 3) -> List[str]:
     q = set(normalize(query))
     scored = []
@@ -215,7 +233,7 @@ def available_tts_voices() -> Dict[str, str]:
 
 def accessible_geometry_answer(question: str, profile: Dict[str, Any], context: List[str], language: str = "en") -> str:
     grade = profile.get("grade", "your grade")
-    context_text = "\n".join(f"- {item}" for item in context[:2])
+    context_text = "\n".join(f"- {sanitize_accessibility_context(item)}" for item in context[:2])
     lowered = question.lower()
     if "pythag" in lowered or "pitago" in lowered or "right triangle" in lowered or "tam giác vuông" in lowered:
         concept_en = "The Pythagorean theorem is used in a right triangle. The two shorter sides meet at the right angle. If you square both shorter sides and add them, you get the square of the longest side."
@@ -744,14 +762,15 @@ def ask(payload: AskRequest) -> AskResponse:
             suggestions = ["Try /geometry", "Try /english", "Try /plan"]
 
     log_event(payload.student_id, subject, payload.question, answer)
-    return AskResponse(answer=answer, subject=subject, suggestions=suggestions, context_used=context)
+    safe_context = [sanitize_accessibility_context(item) for item in context]
+    return AskResponse(answer=answer, subject=subject, suggestions=suggestions, context_used=safe_context)
 
 
 @app.post("/ocr")
 async def ocr(file: UploadFile = File(...), language: str = Form("en")) -> Dict[str, Any]:
-    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     safe_name = re.sub(r"[^a-zA-Z0-9._-]+", "_", file.filename or "upload.bin")
-    path = MEDIA_DIR / safe_name
+    path = UPLOAD_DIR / safe_name
     content = await file.read()
     path.write_bytes(content)
 
