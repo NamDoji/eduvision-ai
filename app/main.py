@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -29,7 +29,7 @@ TTS_DIR = MEDIA_DIR / "tts"
 app = FastAPI(
     title="EduVision AI Backend",
     description="Conference-ready local backend for accessible tutoring through OpenClaw.",
-    version="0.3.0",
+    version="0.4.1",
 )
 
 
@@ -39,6 +39,7 @@ class AskRequest(BaseModel):
     grade: Optional[str] = None
     vision_status: Optional[str] = None
     subject: Literal["geometry", "english", "general"] = "general"
+    language: Literal["en", "vi"] = "en"
 
 
 class AskResponse(BaseModel):
@@ -53,6 +54,7 @@ class StudyPlanRequest(BaseModel):
     grade: str = "Grade 8"
     weakness: str = "geometry"
     available_time: str = "25 minutes per day"
+    language: Literal["en", "vi"] = "en"
 
 
 class StudyPlanResponse(BaseModel):
@@ -74,11 +76,13 @@ class ProfilePayload(BaseModel):
 class CommandRequest(BaseModel):
     student_id: str = "S001"
     message: str
+    language: Literal["en", "vi"] = "en"
 
 
 class TTSRequest(BaseModel):
     text: str
-    voice: str = "Samantha"
+    language: Literal["en", "vi"] = "en"
+    voice: Optional[str] = None
 
 
 def db() -> sqlite3.Connection:
@@ -199,48 +203,78 @@ def ocr_status() -> Dict[str, Any]:
     }
 
 
-def accessible_geometry_answer(question: str, profile: Dict[str, Any], context: List[str]) -> str:
+def default_voice(language: str) -> str:
+    return "Linh" if language == "vi" else "Samantha"
+
+
+def available_tts_voices() -> Dict[str, str]:
+    if not shutil.which("say"):
+        return {"en": "", "vi": ""}
+    return {"en": "Samantha", "vi": "Linh"}
+
+
+def accessible_geometry_answer(question: str, profile: Dict[str, Any], context: List[str], language: str = "en") -> str:
     grade = profile.get("grade", "your grade")
     context_text = "\n".join(f"- {item}" for item in context[:2])
     lowered = question.lower()
     if "pythag" in lowered or "pitago" in lowered or "right triangle" in lowered or "tam giác vuông" in lowered:
-        concept = (
-            "The Pythagorean theorem is used in a right triangle. The two shorter sides meet at the right angle. "
-            "If you square both shorter sides and add them, you get the square of the longest side."
-        )
-        tactile = (
-            "Use two rulers to form an L shape on the desk. The side across from the corner is the longest side. "
-            "That opposite side is called the hypotenuse."
-        )
+        concept_en = "The Pythagorean theorem is used in a right triangle. The two shorter sides meet at the right angle. If you square both shorter sides and add them, you get the square of the longest side."
+        tactile_en = "Use two rulers to form an L shape on the desk. The side across from the corner is the longest side. That opposite side is called the hypotenuse."
+        concept_vi = "Định lý Pythagore dùng cho tam giác vuông. Hai cạnh ngắn gặp nhau tại góc vuông. Nếu bình phương hai cạnh ngắn rồi cộng lại, ta được bình phương cạnh dài nhất."
+        tactile_vi = "Em có thể đặt hai chiếc thước thành hình chữ L trên mặt bàn. Cạnh nối hai đầu còn lại là cạnh dài nhất, gọi là cạnh huyền."
     elif "parallel" in lowered or "song song" in lowered:
-        concept = "Parallel lines are two straight lines that stay the same distance apart and never meet."
-        tactile = "Feel the two long edges of a ruler or two sides of a notebook. They run in the same direction and do not cross."
+        concept_en = "Parallel lines are two straight lines that stay the same distance apart and never meet."
+        tactile_en = "Feel the two long edges of a ruler or two sides of a notebook. They run in the same direction and do not cross."
+        concept_vi = "Hai đường thẳng song song là hai đường luôn cách đều nhau và không bao giờ cắt nhau."
+        tactile_vi = "Em hãy sờ hai cạnh dài của thước hoặc hai mép song song của quyển vở. Chúng đi cùng hướng và không cắt nhau."
     elif "median" in lowered or "trung tuyến" in lowered:
-        concept = "A median of a triangle goes from one vertex to the midpoint of the opposite side."
-        tactile = "Use a string from one corner of a cardboard triangle to the middle point of the opposite edge."
+        concept_en = "A median of a triangle goes from one vertex to the midpoint of the opposite side."
+        tactile_en = "Use a string from one corner of a cardboard triangle to the middle point of the opposite edge."
+        concept_vi = "Đường trung tuyến của tam giác là đoạn thẳng đi từ một đỉnh đến trung điểm của cạnh đối diện."
+        tactile_vi = "Em có thể dùng một sợi dây nối từ một góc của miếng bìa hình tam giác đến điểm chính giữa của cạnh đối diện."
     else:
-        concept = (
-            "An isosceles triangle is a triangle with two equal sides. Imagine using two sticks of the same length "
-            "and one shorter stick. Put the two equal sticks so they meet at one point, then connect their open ends "
-            "with the third stick. The two equal sticks are the equal sides."
+        concept_en = "An isosceles triangle is a triangle with two equal sides. Imagine using two sticks of the same length and one shorter stick. Put the two equal sticks so they meet at one point, then connect their open ends with the third stick. The two equal sticks are the equal sides."
+        tactile_en = "Use two equal pens and one shorter pen to make a triangle on your desk."
+        concept_vi = "Tam giác cân là tam giác có hai cạnh bằng nhau. Em hãy tưởng tượng có hai que tính dài bằng nhau và một que ngắn hơn. Hai que bằng nhau gặp nhau tại một điểm, hai đầu còn lại được nối bằng que thứ ba."
+        tactile_vi = "Em có thể dùng hai chiếc bút bằng nhau và một chiếc bút ngắn hơn để xếp thành tam giác trên bàn."
+    if language == "vi":
+        return (
+            f"Cô sẽ giải thích theo cách phù hợp với học sinh {grade}, dùng lời nói và ví dụ có thể sờ/chạm.\n\n"
+            f"{concept_vi}\n\n"
+            "Bước 1: Một tam giác có ba cạnh.\n"
+            "Bước 2: Gọi tên từng cạnh và từng góc thật chậm.\n"
+            "Bước 3: Dùng tay hoặc trí tưởng tượng để nhận ra quan hệ quan trọng: bằng nhau, song song, vuông góc, trung điểm hoặc cạnh dài nhất.\n"
+            "Bước 4: Nói lại kết luận bằng một câu ngắn.\n\n"
+            f"Ví dụ xúc giác: {tactile_vi}\n\n"
+            "Câu hỏi kiểm tra nhanh: Em hãy nói cạnh, góc hoặc điểm nào là quan trọng nhất trong bài này.\n\n"
+            f"Kiến thức đã dùng:\n{context_text if context_text else '- Quy tắc hình học cơ bản'}\n\n"
+            f"Câu hỏi của em: {question}"
         )
-        tactile = "Use two equal pens and one shorter pen to make a triangle on your desk."
     return (
         f"I will explain this for a student in {grade} using words and touch-based examples.\n\n"
-        f"{concept}\n\n"
+        f"{concept_en}\n\n"
         "Step 1: A triangle has three sides.\n"
         "Step 2: Name the sides and angles slowly, one by one.\n"
         "Step 3: Touch or imagine the key relationship: equal, parallel, perpendicular, midpoint, or longest side.\n"
         "Step 4: Say the conclusion aloud in one sentence.\n\n"
-        f"Touch-based practice: {tactile}\n\n"
+        f"Touch-based practice: {tactile_en}\n\n"
         "Quick check: Tell me which sides, angles, or points are important in this problem.\n\n"
         f"Knowledge used:\n{context_text if context_text else '- Basic geometry rule'}\n\n"
         f"Your question was: {question}"
     )
 
 
-def english_answer(question: str, context: List[str]) -> str:
+def english_answer(question: str, context: List[str], language: str = "en") -> str:
     if "many meeting" in question.lower():
+        if language == "vi":
+            return (
+                "Câu đúng là: I have many meetings today.\n\n"
+                "Giải thích: Từ 'many' dùng với danh từ đếm được số nhiều, nên 'meeting' phải chuyển thành 'meetings'.\n\n"
+                "Luyện tập:\n"
+                "1. I have many classes today.\n"
+                "2. She has many emails to answer.\n"
+                "3. We have many meetings this week."
+            )
         return (
             "The correct sentence is: I have many meetings today.\n\n"
             "Because 'many' is used with plural countable nouns, 'meeting' should be plural: 'meetings'.\n\n"
@@ -248,6 +282,12 @@ def english_answer(question: str, context: List[str]) -> str:
             "1. I have many classes today.\n"
             "2. She has many emails to answer.\n"
             "3. We have many meetings this week."
+        )
+    if language == "vi":
+        return (
+            "Cô có thể sửa câu tiếng Anh này cho em:\n\n"
+            f"{question}\n\n"
+            "Hãy gửi một câu tiếng Anh cụ thể, cô sẽ sửa, giải thích ngữ pháp đơn giản và cho ví dụ luyện tập."
         )
     return (
         "Here is a clearer version of your sentence:\n\n"
@@ -310,13 +350,21 @@ def extract_image_text(path: Path) -> str:
     return extract_image_text_google_vision(path)
 
 
-def describe_ocr_text(text: str) -> str:
+def describe_ocr_text(text: str, language: str = "en") -> str:
     if not text or "not available" in text or "failed" in text.lower():
+        if language == "vi":
+            return "Chưa trích xuất được chữ đáng tin cậy. Em hãy thử ảnh/PDF rõ hơn hoặc kiểm tra lại công cụ OCR."
         return "I could not extract reliable text yet. Please try a clearer image/PDF or install the OCR engine."
     if any(token in text.lower() for token in ["triangle", "tam giác", "angle", "góc", "ab", "ac"]):
+        if language == "vi":
+            return "Tài liệu có nội dung hình học. Cô sẽ mô tả các điểm, cạnh, độ dài bằng nhau, góc và kết luận bằng lời."
         return "The material appears to contain geometry content. I will describe points, sides, equal lengths, angles, and conclusions verbally."
     if "|" in text or "\t" in text:
+        if language == "vi":
+            return "Tài liệu có thể chứa bảng. Cô sẽ đọc tiêu đề, hàng, cột và các giá trị quan trọng."
         return "The material may contain a table. I will read headers, rows, columns, and key values."
+    if language == "vi":
+        return "Tài liệu có vẻ là văn bản. Cô sẽ tóm tắt và giải thích nhiệm vụ học tập."
     return "The material appears to be text. I will summarize it and explain the learning task."
 
 
@@ -345,6 +393,32 @@ def parse_plan_message(content: str) -> StudyPlanRequest:
     available_time = time_match.group(1) if time_match else "25 minutes per day"
 
     return StudyPlanRequest(grade=grade, weakness=weakness, available_time=available_time)
+
+
+def localized_plan(payload: StudyPlanRequest) -> StudyPlanResponse:
+    if payload.language == "vi":
+        return StudyPlanResponse(
+            weekly_plan=[
+                f"Ngày 1: Ôn lại kiến thức cơ bản về {payload.weakness} trong {payload.available_time}.",
+                "Ngày 2: Học một khái niệm mới bằng mô tả lời nói và ví dụ có thể sờ/chạm.",
+                "Ngày 3: Làm 5 bài tập cơ bản có gợi ý từng bước.",
+                "Ngày 4: Xem lại lỗi sai và yêu cầu giải thích chậm hơn nếu cần.",
+                "Ngày 5: Làm 5 bài tương tự một cách độc lập.",
+                "Ngày 6: Tự nói lại khái niệm bằng lời của mình.",
+                "Ngày 7: Làm bài kiểm tra ngắn và cập nhật hồ sơ học tập.",
+            ]
+        )
+    return StudyPlanResponse(
+        weekly_plan=[
+            f"Day 1: Review the basic ideas of {payload.weakness} for {payload.available_time}.",
+            "Day 2: Learn one concept using touch-based examples and simple words.",
+            "Day 3: Practice 5 basic exercises with step-by-step hints.",
+            "Day 4: Review mistakes and ask for a slower explanation.",
+            "Day 5: Do 5 similar exercises independently.",
+            "Day 6: Explain the concept back in your own words.",
+            "Day 7: Take a short review quiz and update the student profile.",
+        ]
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -405,13 +479,14 @@ def web_demo() -> str:
       min-height: 360px; max-height: 620px; overflow: auto; line-height: 1.45;
     }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row.three { grid-template-columns: 1fr 1fr 1fr; }
     .script { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
     .script li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fbfcfe; color: #344054; }
     .script b { color: var(--red); }
     .muted { color: var(--muted); font-size: 14px; line-height: 1.45; }
     .actions { display: flex; flex-wrap: wrap; gap: 0; }
     @media (max-width: 860px) {
-      .grid, .row, .status { grid-template-columns: 1fr; }
+      .grid, .row, .row.three, .status { grid-template-columns: 1fr; }
       .topbar { align-items: flex-start; flex-direction: column; }
       button { width: 100%; margin-right: 0; }
     }
@@ -441,7 +516,7 @@ def web_demo() -> str:
       <div>
         <section>
           <h2>AI Tutor</h2>
-          <div class="row">
+          <div class="row three">
             <div>
               <label for="subject">Subject</label>
               <select id="subject">
@@ -453,6 +528,13 @@ def web_demo() -> str:
             <div>
               <label for="student">Student ID</label>
               <input id="student" value="S001" />
+            </div>
+            <div>
+              <label for="language">Language / Ngôn ngữ</label>
+              <select id="language">
+                <option value="en">English voice</option>
+                <option value="vi">Tiếng Việt - giọng Linh</option>
+              </select>
             </div>
           </div>
           <label for="question">Question</label>
@@ -533,7 +615,8 @@ def web_demo() -> str:
         body: JSON.stringify({
           student_id: document.getElementById('student').value,
           subject: document.getElementById('subject').value,
-          question: document.getElementById('question').value
+          question: document.getElementById('question').value,
+          language: document.getElementById('language').value
         })
       });
       document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
@@ -547,7 +630,8 @@ def web_demo() -> str:
           student_id: document.getElementById('student').value,
           grade: 'Grade 8',
           weakness: document.getElementById('weakness').value,
-          available_time: document.getElementById('time').value
+          available_time: document.getElementById('time').value,
+          language: document.getElementById('language').value
         })
       });
       document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
@@ -563,6 +647,7 @@ def web_demo() -> str:
       if (!input.files.length) return;
       const form = new FormData();
       form.append('file', input.files[0]);
+      form.append('language', document.getElementById('language').value);
       const res = await fetch('/ocr', { method: 'POST', body: form });
       document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
     }
@@ -572,7 +657,7 @@ def web_demo() -> str:
       const res = await fetch('/tts', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({text})
+        body: JSON.stringify({text, language: document.getElementById('language').value})
       });
       const data = await res.json();
       document.getElementById('result').textContent = JSON.stringify(data, null, 2);
@@ -594,9 +679,11 @@ def health() -> Dict[str, Any]:
     return {
         "status": "ok",
         "service": "eduvision-ai",
-        "version": "0.3.0",
+        "version": "0.4.1",
         "ocr": ocr_status(),
         "tts_available": bool(shutil.which("say")),
+        "tts_voices": available_tts_voices(),
+        "languages": ["en", "vi"],
     }
 
 
@@ -617,24 +704,36 @@ def ask(payload: AskRequest) -> AskResponse:
     subject = payload.subject
 
     if subject == "geometry":
-        answer = accessible_geometry_answer(payload.question, profile, context)
-        suggestions = ["Ask for a slower explanation", "Ask for similar exercises", "Ask for an audio version"]
-    elif subject == "english":
-        answer = english_answer(payload.question, context)
-        suggestions = ["Ask for more examples", "Ask for a short dialogue", "Ask for 5 practice sentences"]
-    else:
-        answer = (
-            "I can help with geometry, English, OCR reading, and study planning. "
-            "Please tell me the subject and what you find difficult."
+        answer = accessible_geometry_answer(payload.question, profile, context, payload.language)
+        suggestions = (
+            ["Yêu cầu giải thích chậm hơn", "Xin bài tương tự", "Nghe phiên bản giọng nói"]
+            if payload.language == "vi"
+            else ["Ask for a slower explanation", "Ask for similar exercises", "Ask for an audio version"]
         )
-        suggestions = ["Try /geometry", "Try /english", "Try /plan"]
+    elif subject == "english":
+        answer = english_answer(payload.question, context, payload.language)
+        suggestions = (
+            ["Xin thêm ví dụ", "Luyện hội thoại ngắn", "Tạo 5 câu luyện tập"]
+            if payload.language == "vi"
+            else ["Ask for more examples", "Ask for a short dialogue", "Ask for 5 practice sentences"]
+        )
+    else:
+        if payload.language == "vi":
+            answer = "Cô có thể hỗ trợ Toán hình, tiếng Anh, đọc ảnh/PDF bằng OCR và lập kế hoạch học tập. Em hãy nói môn học và phần em thấy khó."
+            suggestions = ["Thử /geometry", "Thử /english", "Thử /plan"]
+        else:
+            answer = (
+                "I can help with geometry, English, OCR reading, and study planning. "
+                "Please tell me the subject and what you find difficult."
+            )
+            suggestions = ["Try /geometry", "Try /english", "Try /plan"]
 
     log_event(payload.student_id, subject, payload.question, answer)
     return AskResponse(answer=answer, subject=subject, suggestions=suggestions, context_used=context)
 
 
 @app.post("/ocr")
-async def ocr(file: UploadFile = File(...)) -> Dict[str, Any]:
+async def ocr(file: UploadFile = File(...), language: str = Form("en")) -> Dict[str, Any]:
     MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     safe_name = re.sub(r"[^a-zA-Z0-9._-]+", "_", file.filename or "upload.bin")
     path = MEDIA_DIR / safe_name
@@ -652,7 +751,7 @@ async def ocr(file: UploadFile = File(...)) -> Dict[str, Any]:
         except Exception:
             text = "Unsupported file type for text extraction."
 
-    description = describe_ocr_text(text)
+    description = describe_ocr_text(text, language)
     summary = text[:600] + ("..." if len(text) > 600 else "")
     log_event("S001", "ocr", file.filename or "upload", summary)
     return {
@@ -667,17 +766,7 @@ async def ocr(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 @app.post("/study-plan", response_model=StudyPlanResponse)
 def study_plan(payload: StudyPlanRequest) -> StudyPlanResponse:
-    plan = StudyPlanResponse(
-        weekly_plan=[
-            f"Day 1: Review the basic ideas of {payload.weakness} for {payload.available_time}.",
-            "Day 2: Learn one concept using touch-based examples and simple words.",
-            "Day 3: Practice 5 basic exercises with step-by-step hints.",
-            "Day 4: Review mistakes and ask for a slower explanation.",
-            "Day 5: Do 5 similar exercises independently.",
-            "Day 6: Explain the concept back in your own words.",
-            "Day 7: Take a short review quiz and update the student profile.",
-        ]
-    )
+    plan = localized_plan(payload)
     log_event(payload.student_id, "plan", payload.weakness, "\n".join(plan.weekly_plan))
     return plan
 
@@ -718,21 +807,22 @@ def command(payload: CommandRequest) -> Dict[str, Any]:
     text = payload.message.strip()
     lowered = text.lower()
     if lowered.startswith("/geometry"):
-        req = AskRequest(student_id=payload.student_id, subject="geometry", question=text.replace("/geometry", "", 1).strip())
+        req = AskRequest(student_id=payload.student_id, subject="geometry", question=text.replace("/geometry", "", 1).strip(), language=payload.language)
         return ask(req).dict()
     if lowered.startswith("/english"):
-        req = AskRequest(student_id=payload.student_id, subject="english", question=text.replace("/english", "", 1).strip())
+        req = AskRequest(student_id=payload.student_id, subject="english", question=text.replace("/english", "", 1).strip(), language=payload.language)
         return ask(req).dict()
     if lowered.startswith("/plan"):
         content = text.replace("/plan", "", 1).strip() or "geometry"
         req = parse_plan_message(content)
         req.student_id = payload.student_id
+        req.language = payload.language
         return study_plan(req).dict()
     if lowered.startswith("/profile"):
         return profile(payload.student_id)
     if lowered.startswith("/report"):
         return report(payload.student_id)
-    req = AskRequest(student_id=payload.student_id, subject="general", question=text)
+    req = AskRequest(student_id=payload.student_id, subject="general", question=text, language=payload.language)
     return ask(req).dict()
 
 
@@ -740,11 +830,12 @@ def command(payload: CommandRequest) -> Dict[str, Any]:
 def tts(payload: TTSRequest) -> Dict[str, str]:
     TTS_DIR.mkdir(parents=True, exist_ok=True)
     text = payload.text[:2500]
-    out = TTS_DIR / f"eduvision-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.aiff"
+    out = TTS_DIR / f"eduvision-{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.aiff"
     if not shutil.which("say"):
         return {"status": "unavailable", "message": "macOS say command is not available."}
-    subprocess.run(["say", "-v", payload.voice, "-o", str(out), text], check=True)
-    return {"status": "ok", "audio_url": f"/media/tts/{out.name}", "file": str(out)}
+    voice = payload.voice or default_voice(payload.language)
+    subprocess.run(["say", "-v", voice, "-o", str(out), text], check=True)
+    return {"status": "ok", "language": payload.language, "voice": voice, "audio_url": f"/media/tts/{out.name}", "file": str(out)}
 
 
 @app.get("/media/tts/{filename}")

@@ -45,3 +45,15 @@ Question: Compare angle B and angle C.
 Expected explanation:
 
 If AB equals AC, then triangle ABC is isosceles. The angles opposite the equal sides are equal, so angle B equals angle C.
+
+## Vietnamese Demo
+
+```text
+/geometry Giải thích định lý Pythagore cho học sinh lớp 8 nhìn mờ
+```
+
+```text
+/english I have many meeting today
+```
+
+Use `language=vi` to get Vietnamese explanations and the Vietnamese `Linh` voice.

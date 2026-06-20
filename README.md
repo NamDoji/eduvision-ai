@@ -14,6 +14,7 @@ EduVision AI is an OpenClaw-based learning assistant for visually impaired and l
 - Google Vision OCR integration when credentials are configured
 - Tesseract OCR fallback for local image OCR
 - macOS voice output through `say`
+- Language selector for English/Vietnamese responses and matching TTS voices (`Samantha` for English, `Linh` for Vietnamese)
 - Conference documents: `DEMO_GUIDE.md`, `TECHNICAL_REPORT.md`
 - Prepared OCR demo image: `demo_assets/demo_geometry_ocr.png`
 
@@ -35,11 +36,19 @@ curl http://127.0.0.1:8010/vision-status
 
 curl -X POST http://127.0.0.1:8010/ask \
   -H 'Content-Type: application/json' \
-  -d '{"student_id":"S001","question":"I do not understand an isosceles triangle","subject":"geometry"}'
+  -d '{"student_id":"S001","question":"I do not understand an isosceles triangle","subject":"geometry","language":"en"}'
+
+curl -X POST http://127.0.0.1:8010/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"student_id":"S001","question":"Giải thích định lý Pythagore cho học sinh nhìn mờ","subject":"geometry","language":"vi"}'
 
 curl -X POST http://127.0.0.1:8010/command \
   -H 'Content-Type: application/json' \
-  -d '{"student_id":"S001","message":"/english I have many meeting today"}'
+  -d '{"student_id":"S001","message":"/english I have many meeting today","language":"vi"}'
+
+curl -X POST http://127.0.0.1:8010/tts \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Xin chào, đây là EduVision AI.","language":"vi"}'
 
 curl http://127.0.0.1:8010/report/S001
 curl -X POST http://127.0.0.1:8010/demo/reset

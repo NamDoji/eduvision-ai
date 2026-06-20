@@ -19,6 +19,11 @@ Open the local or LAN URL. Show the status cards:
 
 ### 2. Geometry Tutor
 
+Select language:
+
+- English: answer and voice use English.
+- Tiếng Việt: answer and voice use Vietnamese voice `Linh`.
+
 Prompt:
 
 ```text
@@ -77,6 +82,12 @@ The system creates a weekly study plan with review, tactile explanation, practic
 
 Click "Progress Report". Show that learning events are saved locally in SQLite and can be summarized for teachers or parents.
 
+### 7. Voice By Language
+
+Select `English voice`, run a tutor answer, then click `Speak Result`. The response should use voice `Samantha`.
+
+Select `Tiếng Việt - giọng Linh`, run a Vietnamese tutor answer, then click `Speak Result`. The response should use voice `Linh`.
+
 ## Telegram/OpenClaw Demo Commands
 
 Use these command patterns when routing through OpenClaw:
@@ -88,6 +99,8 @@ Use these command patterns when routing through OpenClaw:
 /profile
 /report
 ```
+
+For API routing, pass `language=en` or `language=vi` in the JSON payload.
 
 ## Google Vision Setup
 

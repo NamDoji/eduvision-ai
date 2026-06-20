@@ -20,6 +20,12 @@ A right triangle has one right angle, like the corner of a book or desk. The sid
 
 Accessible explanation: "Use two rulers to form an L shape. The diagonal side connecting the open ends is the longest side. The formula describes how the lengths of those three sides relate."
 
+## Định Lý Pythagore Cho Học Sinh Nhìn Mờ
+
+Định lý Pythagore dùng cho tam giác vuông. Hai cạnh ngắn gặp nhau tại góc vuông, giống như hai cạnh của một góc bàn hoặc góc quyển sách. Cạnh đối diện góc vuông là cạnh dài nhất, gọi là cạnh huyền. Công thức nói rằng: bình phương cạnh góc vuông thứ nhất cộng bình phương cạnh góc vuông thứ hai bằng bình phương cạnh huyền.
+
+Giải thích xúc giác: "Em đặt hai chiếc thước thành hình chữ L trên mặt bàn. Đoạn nối hai đầu còn lại là cạnh huyền. Định lý Pythagore mô tả quan hệ độ dài giữa ba cạnh đó."
+
 ## Parallel And Perpendicular Lines
 
 Parallel lines run in the same direction and never meet. The two long edges of a ruler are parallel. Perpendicular lines meet at a right angle. The corner of a desk or book is a tactile example of perpendicular lines.

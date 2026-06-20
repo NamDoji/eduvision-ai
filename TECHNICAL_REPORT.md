@@ -30,6 +30,7 @@ Student
 - `/study-plan` endpoint.
 - `/profile` and `/report` endpoints.
 - `/tts` endpoint using macOS `say`.
+- English/Vietnamese language selector with matching TTS voice selection.
 - `/demo/reset` endpoint for conference rehearsal cleanup.
 - Synthetic train.csv and train.jsonl samples.
 - RAG-style local knowledge base.
@@ -66,7 +67,7 @@ Returns recent learning activity and recommendations.
 
 ### POST /tts
 
-Creates an audio file from text using macOS voice output.
+Creates an audio file from text using macOS voice output. `language=en` uses `Samantha`; `language=vi` uses `Linh` when available.
 
 ### POST /demo/reset
 
