@@ -441,271 +441,424 @@ def localized_plan(payload: StudyPlanRequest) -> StudyPlanResponse:
 
 @app.get("/", response_class=HTMLResponse)
 def web_demo() -> str:
-    return """
-<!doctype html>
-<html lang="vi">
+    return """<!doctype html>
+<html lang="vi" id="html-root">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EduVision AI Conference Demo</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>EduVision AI</title>
   <style>
-    :root {
-      color-scheme: light;
-      --red: #c41230;
-      --blue: #12355b;
-      --ink: #172033;
-      --muted: #667085;
-      --line: #d9e2ef;
-      --soft: #f6f8fb;
-      --panel: #ffffff;
-      font-family: Inter, Arial, sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html { -webkit-text-size-adjust: 100%; }
-    body { margin: 0; background: var(--soft); color: var(--ink); overflow-x: hidden; }
-    header { background: #fff; border-bottom: 1px solid var(--line); }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: clamp(14px, 2.4vw, 20px); }
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; color: var(--blue); }
-    .mark { width: 38px; height: 38px; border-radius: 8px; background: var(--red); color: #fff; display: grid; place-items: center; font-weight: 900; }
-    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; color: var(--muted); font-size: 14px; background: #fff; }
-    .hero { padding: clamp(18px, 3vw, 28px) clamp(14px, 2.4vw, 20px) 12px; }
-    h1 { margin: 0; font-size: clamp(28px, 4vw, 52px); line-height: 1.06; color: var(--blue); letter-spacing: 0; max-width: 900px; overflow-wrap: anywhere; }
-    .lead { color: var(--muted); font-size: clamp(16px, 1.8vw, 18px); line-height: 1.55; max-width: 800px; margin: 14px 0 0; }
-    main { max-width: 1180px; margin: 0 auto; padding: 8px clamp(14px, 2.4vw, 20px) 44px; }
-    .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; margin: 18px 0; }
-    .stat, section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
-    .stat, section { min-width: 0; }
-    .stat { padding: 14px; min-height: 78px; }
-    .stat strong { display: block; color: var(--blue); margin-bottom: 6px; font-size: 13px; text-transform: uppercase; }
-    .stat span { color: var(--ink); font-weight: 700; overflow-wrap: anywhere; }
-    .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(360px, .95fr); gap: 16px; align-items: start; }
-    section { padding: 18px; margin-bottom: 16px; }
-    h2 { margin: 0 0 12px; font-size: 20px; color: var(--blue); }
-    h3 { margin: 16px 0 8px; font-size: 15px; color: var(--blue); }
-    label { display: block; font-weight: 700; margin: 12px 0 6px; }
-    textarea, input, select {
-      width: 100%; padding: 12px; border: 1px solid #c7d0dd; border-radius: 6px; font-size: 16px; background: #fff;
-      min-width: 0;
-    }
-    input[type="file"] { overflow: hidden; }
-    textarea { min-height: 118px; resize: vertical; }
-    button {
-      min-height: 44px; margin-top: 12px; margin-right: 0; padding: 12px 15px; border: 0; border-radius: 6px;
-      background: var(--red); color: white; font-weight: 800; cursor: pointer;
-    }
-    button.secondary { background: var(--blue); }
-    button.ghost { background: #eef3f8; color: var(--blue); border: 1px solid var(--line); }
-    pre {
-      white-space: pre-wrap; background: #111827; color: #e8eef8; border-radius: 8px; padding: 16px;
-      min-height: 360px; max-height: 620px; overflow: auto; line-height: 1.45; overflow-wrap: anywhere; word-break: break-word;
-    }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .row.three { grid-template-columns: 1fr 1fr 1fr; }
-    .script { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-    .script li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fbfcfe; color: #344054; }
-    .script b { color: var(--red); }
-    .muted { color: var(--muted); font-size: 14px; line-height: 1.45; }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .result-panel { position: sticky; top: 16px; }
-    @media (max-width: 980px) {
-      .grid, .row, .row.three { grid-template-columns: 1fr; }
-      .result-panel { position: static; }
-      .topbar { align-items: flex-start; flex-direction: column; }
-      button { width: 100%; margin-right: 0; }
-      pre { min-height: 280px; max-height: 460px; }
-    }
-    @media (max-width: 520px) {
-      .brand { font-size: 15px; }
-      .mark { width: 34px; height: 34px; }
-      .badge { font-size: 13px; }
-      section { padding: 14px; }
-      .stat { min-height: 70px; padding: 12px; }
-      pre { min-height: 240px; max-height: 420px; padding: 12px; font-size: 13px; }
-    }
+    :root{--red:#c41230;--blue:#12355b;--ink:#172033;--muted:#667085;--line:#d9e2ef;--soft:#f6f8fb;--panel:#fff;font-family:Inter,Arial,sans-serif}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--soft);color:var(--ink);overflow-x:hidden;font-size:17px}
+    header{background:#fff;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:100}
+    .topbar{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--blue);font-size:20px}
+    .mark{width:40px;height:40px;border-radius:8px;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:900;font-size:16px;flex-shrink:0}
+    /* LANG TOGGLE */
+    .lang-toggle{display:flex;gap:0;border:2px solid var(--blue);border-radius:10px;overflow:hidden;flex-shrink:0}
+    .lang-toggle button{padding:10px 20px;font-size:16px;font-weight:700;border:none;cursor:pointer;transition:background 0.15s,color 0.15s;min-height:44px;min-width:64px}
+    .lang-toggle button.active{background:var(--blue);color:#fff}
+    .lang-toggle button:not(.active){background:#fff;color:var(--blue)}
+    .lang-toggle button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+    /* LOADING BAR */
+    #loading-bar{display:none;position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--red),#e85d8a,var(--red));background-size:200%;animation:loadbar 1s linear infinite;z-index:9999}
+    @keyframes loadbar{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .hero-wrap{max-width:1180px;margin:0 auto;padding:20px 20px 12px}
+    h1{margin:0;font-size:clamp(24px,3.5vw,46px);line-height:1.08;color:var(--blue)}
+    .lead{color:var(--muted);font-size:clamp(15px,1.6vw,17px);line-height:1.55;margin:10px 0 0}
+    main{max-width:1180px;margin:0 auto;padding:10px 20px 50px}
+    .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}
+    .stat,.card{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+    .stat{padding:14px}
+    .stat strong{display:block;color:var(--blue);font-size:12px;text-transform:uppercase;margin-bottom:6px}
+    .stat span{font-weight:700;font-size:16px;word-break:break-all}
+    .grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,0.9fr);gap:16px;align-items:start}
+    .card{padding:20px;margin-bottom:14px}
+    h2{margin:0 0 14px;font-size:20px;color:var(--blue)}
+    label{display:block;font-weight:700;margin:14px 0 6px;font-size:15px}
+    textarea,input,select{width:100%;padding:12px;border:1.5px solid #c7d0dd;border-radius:8px;font-size:16px;background:#fff;font-family:inherit}
+    textarea{min-height:110px;resize:vertical}
+    textarea:focus,input:focus,select:focus{outline:none;border-color:var(--blue)}
+    .btn{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:12px 18px;border:0;border-radius:8px;background:var(--red);color:#fff;font-weight:700;font-size:16px;cursor:pointer;transition:background 0.15s;font-family:inherit}
+    .btn:hover{background:#a50f28}
+    .btn.blue{background:var(--blue)}.btn.blue:hover{background:#0e2740}
+    .btn.ghost{background:#eef3f8;color:var(--blue);border:1px solid var(--line)}.btn.ghost:hover{background:#dce6f0}
+    .btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    pre{white-space:pre-wrap;background:#111827;color:#e8eef8;border-radius:10px;padding:18px;min-height:340px;max-height:600px;overflow:auto;line-height:1.5;word-break:break-word;font-size:14px}
+    .result-panel{position:sticky;top:80px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .speaking-badge{display:none;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 14px;color:#15803d;font-weight:600;font-size:15px;margin-top:10px;align-items:center;gap:8px}
+    .speaking-badge.show{display:flex}
+    @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}}
+    @media(max-width:480px){.topbar{flex-direction:column;align-items:flex-start}.lang-toggle button{padding:9px 14px;font-size:15px}}
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap topbar">
-      <div class="brand"><div class="mark">EV</div><div>EduVision AI</div></div>
-      <div class="badge">Conference Local Demo</div>
+<div id="loading-bar"></div>
+
+<header>
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">EV</div>
+      <div>EduVision AI</div>
     </div>
-    <div class="wrap hero">
-      <h1>Trợ lý học tập cá nhân hóa cho học sinh khiếm thị và nhìn mờ</h1>
-      <p class="lead">Demo chạy local qua OpenClaw + FastAPI, hỗ trợ Toán hình, tiếng Anh, OCR ảnh/PDF, kế hoạch học tập, giọng nói và báo cáo tiến bộ.</p>
+    <!-- LANGUAGE TOGGLE -->
+    <div class="lang-toggle" role="group" aria-label="Chọn ngôn ngữ / Select language">
+      <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Chuyển sang Tiếng Việt">🇻🇳 VI</button>
+      <button id="btn-en" onclick="setLang('en')" aria-pressed="false" aria-label="Switch to English">🇬🇧 EN</button>
     </div>
-  </header>
+  </div>
+  <div class="hero-wrap">
+    <h1 id="hero-title">Trợ lý học tập thông minh cho học sinh khiếm thị</h1>
+    <p class="lead" id="hero-lead">Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, kế hoạch học tập và giọng nói song ngữ.</p>
+  </div>
+</header>
 
-  <main>
-    <div class="status" id="status">
-      <div class="stat"><strong>Backend</strong><span>Checking...</span></div>
-      <div class="stat"><strong>OCR</strong><span>Checking...</span></div>
-      <div class="stat"><strong>Voice</strong><span>macOS say</span></div>
-      <div class="stat"><strong>Gateway</strong><span>OpenClaw ready</span></div>
-    </div>
+<main>
+  <div class="status" id="status">
+    <div class="stat"><strong>Backend</strong><span>Đang kiểm tra...</span></div>
+    <div class="stat"><strong>OCR</strong><span>...</span></div>
+    <div class="stat"><strong id="voice-label">Giọng nói</strong><span id="voice-val">...</span></div>
+    <div class="stat"><strong>Google Vision</strong><span id="gv-val">...</span></div>
+  </div>
 
-    <div class="grid">
-      <div>
-        <section>
-          <h2>AI Tutor</h2>
-          <div class="row three">
-            <div>
-              <label for="subject">Subject</label>
-              <select id="subject">
-                <option value="geometry">Geometry</option>
-                <option value="english">English</option>
-                <option value="general">General</option>
-              </select>
-            </div>
-            <div>
-              <label for="student">Student ID</label>
-              <input id="student" value="S001" />
-            </div>
-            <div>
-              <label for="language">Language / Ngôn ngữ</label>
-              <select id="language">
-                <option value="en">English voice</option>
-                <option value="vi">Tiếng Việt - giọng Linh</option>
-              </select>
-            </div>
+  <div class="grid">
+    <div>
+      <!-- AI TUTOR -->
+      <div class="card">
+        <h2 id="tutor-title">🤖 AI Gia sư</h2>
+        <div class="row2">
+          <div>
+            <label for="subject" id="lbl-subject">Môn học</label>
+            <select id="subject">
+              <option value="geometry" id="opt-geo">Hình học</option>
+              <option value="english" id="opt-eng">Tiếng Anh</option>
+              <option value="general" id="opt-gen">Tổng hợp</option>
+            </select>
           </div>
-          <label for="question">Question</label>
-          <textarea id="question">Explain the Pythagorean theorem for a Grade 8 low-vision student</textarea>
-          <div class="actions">
-            <button onclick="askTutor()">Ask Tutor</button>
-            <button class="secondary" onclick="loadPrompt('geometry')">Geometry Demo</button>
-            <button class="secondary" onclick="loadPrompt('english')">English Demo</button>
-            <button class="ghost" onclick="speakResult()">Speak Result</button>
+          <div>
+            <label for="student" id="lbl-student">Mã học sinh</label>
+            <input id="student" value="S001"/>
           </div>
-        </section>
-
-        <section>
-          <h2>Study Plan & Report</h2>
-          <div class="row">
-            <div>
-              <label for="weakness">Weakness</label>
-              <input id="weakness" value="geometry" />
-            </div>
-            <div>
-              <label for="time">Available time</label>
-              <input id="time" value="25 minutes per day" />
-            </div>
-          </div>
-          <button onclick="studyPlan()">Create Plan</button>
-          <button class="secondary" onclick="report()">Progress Report</button>
-          <button class="ghost" onclick="resetDemo()">Reset Demo Data</button>
-        </section>
-
-        <section>
-          <h2>OCR Learning Reader</h2>
-          <p class="muted">Upload ảnh hoặc PDF bài tập. Hệ thống ưu tiên Google Vision khi có credential, sau đó fallback Tesseract local.</p>
-          <input id="ocrFile" type="file" />
-          <button onclick="ocr()">Read File</button>
-        </section>
-
-        <section>
-          <h2>Demo Script</h2>
-          <ul class="script">
-            <li><b>1.</b> Geometry: explain Pythagorean theorem without visual-only language.</li>
-            <li><b>2.</b> English: correct “I have many meeting today”.</li>
-            <li><b>3.</b> OCR: read image/PDF and describe geometry relationships.</li>
-            <li><b>4.</b> Plan: create a 7-day personalized learning plan.</li>
-            <li><b>5.</b> Report: show saved learning history and recommendation.</li>
-          </ul>
-        </section>
+        </div>
+        <label for="question" id="lbl-question">Câu hỏi</label>
+        <textarea id="question">Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.</textarea>
+        <div class="actions">
+          <button class="btn" onclick="askTutor()" id="btn-ask" aria-label="Gửi câu hỏi tới AI">🎓 Hỏi AI</button>
+          <button class="btn blue" onclick="loadDemo('geometry')" id="btn-demo-geo">📐 Demo Hình học</button>
+          <button class="btn blue" onclick="loadDemo('english')" id="btn-demo-eng">🗣 Demo Tiếng Anh</button>
+          <button class="btn ghost" onclick="speakResult()" id="btn-speak">🔊 Đọc to kết quả</button>
+        </div>
+        <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span></div>
       </div>
 
-      <section class="result-panel">
-        <h2>Result</h2>
-        <pre id="result">Ready for conference demo.</pre>
-      </section>
+      <!-- STUDY PLAN -->
+      <div class="card">
+        <h2 id="plan-title">📅 Kế hoạch học tập</h2>
+        <div class="row2">
+          <div>
+            <label for="weakness" id="lbl-weak">Điểm yếu</label>
+            <input id="weakness" value="hình học"/>
+          </div>
+          <div>
+            <label for="time" id="lbl-time">Thời gian mỗi ngày</label>
+            <input id="time" value="25 phút"/>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" onclick="studyPlan()" id="btn-plan">📅 Tạo kế hoạch 7 ngày</button>
+          <button class="btn blue" onclick="report()" id="btn-report">📊 Báo cáo tiến độ</button>
+        </div>
+      </div>
+
+      <!-- OCR -->
+      <div class="card">
+        <h2 id="ocr-title">📷 Đọc tài liệu (OCR)</h2>
+        <p id="ocr-hint" style="color:var(--muted);font-size:15px;margin:0 0 10px">Chụp ảnh bài tập hoặc PDF, hệ thống sẽ đọc và giải thích bằng giọng nói.</p>
+        <input id="ocrFile" type="file" accept=".jpg,.jpeg,.png,.pdf" aria-label="Chọn ảnh hoặc PDF"/>
+        <div class="actions">
+          <button class="btn" onclick="ocr()" id="btn-ocr">🔍 Nhận diện & Đọc</button>
+        </div>
+      </div>
     </div>
-  </main>
 
-  <script>
-    const prompts = {
-      geometry: {subject: 'geometry', text: 'Explain the Pythagorean theorem for a Grade 8 low-vision student'},
-      english: {subject: 'english', text: 'I have many meeting today'}
-    };
-    async function refreshStatus() {
-      const res = await fetch('/health');
-      const data = await res.json();
-      document.getElementById('status').innerHTML = `
-        <div class="stat"><strong>Backend</strong><span>${data.status} - ${data.version}</span></div>
-        <div class="stat"><strong>OCR</strong><span>${data.ocr.recommended_provider}</span></div>
-        <div class="stat"><strong>Voice</strong><span>${data.tts_available ? 'available' : 'unavailable'}</span></div>
-        <div class="stat"><strong>Google Vision</strong><span>${data.ocr.google_credentials_file_exists ? 'configured' : 'not configured'}</span></div>`;
-    }
-    function loadPrompt(kind) {
-      document.getElementById('subject').value = prompts[kind].subject;
-      document.getElementById('question').value = prompts[kind].text;
-    }
-    async function askTutor() {
-      const res = await fetch('/ask', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          student_id: document.getElementById('student').value,
-          subject: document.getElementById('subject').value,
-          question: document.getElementById('question').value,
-          language: document.getElementById('language').value
-        })
-      });
-      document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
-    }
+    <!-- RESULT PANEL -->
+    <div class="result-panel">
+      <div class="card">
+        <h2 id="result-title">📋 Kết quả</h2>
+        <pre id="result" aria-live="polite" aria-label="Kết quả từ AI">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn Demo.</pre>
+      </div>
+    </div>
+  </div>
+</main>
 
-    async function studyPlan() {
-      const res = await fetch('/study-plan', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          student_id: document.getElementById('student').value,
-          grade: 'Grade 8',
-          weakness: document.getElementById('weakness').value,
-          available_time: document.getElementById('time').value,
-          language: document.getElementById('language').value
-        })
-      });
-      document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
-    }
+<script>
+// ── LANGUAGE STATE ─────────────────────────────────────────────────────────
+let LANG = localStorage.getItem('ev_lang') || 'vi';
 
-    async function report() {
-      const res = await fetch('/report/' + encodeURIComponent(document.getElementById('student').value));
-      document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
-    }
+const UI = {
+  vi: {
+    htmlLang:'vi', heroTitle:'Trợ lý học tập thông minh cho học sinh khiếm thị',
+    heroLead:'Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, kế hoạch học tập và giọng nói song ngữ.',
+    tutorTitle:'🤖 AI Gia sư', lblSubject:'Môn học', lblStudent:'Mã học sinh', lblQuestion:'Câu hỏi',
+    optGeo:'Hình học', optEng:'Tiếng Anh', optGen:'Tổng hợp',
+    btnAsk:'🎓 Hỏi AI', btnDemoGeo:'📐 Demo Hình học', btnDemoEng:'🗣 Demo Tiếng Anh', btnSpeak:'🔊 Đọc to kết quả', btnStop:'⏹ Dừng đọc',
+    planTitle:'📅 Kế hoạch học tập', lblWeak:'Điểm yếu', lblTime:'Thời gian mỗi ngày',
+    btnPlan:'📅 Tạo kế hoạch 7 ngày', btnReport:'📊 Báo cáo tiến độ',
+    ocrTitle:'📷 Đọc tài liệu (OCR)', ocrHint:'Chụp ảnh bài tập hoặc PDF, hệ thống sẽ đọc và giải thích bằng giọng nói.',
+    btnOCR:'🔍 Nhận diện & Đọc', resultTitle:'📋 Kết quả',
+    resultReady:'Sẵn sàng. Hãy đặt câu hỏi hoặc chọn Demo.',
+    voiceLabel:'Giọng nói', gvYes:'Đã cấu hình', gvNo:'Chưa cấu hình',
+    speaking:'Đang đọc...', stopped:'Đã dừng đọc.', defaultQ:'Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.',
+    weakDefault:'hình học', timeDefault:'25 phút',
+    demoGeo:'Tam giác cân là gì? Giải thích dùng ví dụ xúc giác cho học sinh khiếm thị lớp 8.',
+    demoEng:'Sửa câu sau: I have many meeting today',
+    ttsLang:'vi-VN', ttsVoiceHint:'Giọng Linh (vi-VN)',
+  },
+  en: {
+    htmlLang:'en', heroTitle:'Smart Learning Assistant for Visually Impaired Students',
+    heroLead:'Supports Geometry, English, OCR document reading, study planning, and bilingual voice output.',
+    tutorTitle:'🤖 AI Tutor', lblSubject:'Subject', lblStudent:'Student ID', lblQuestion:'Question',
+    optGeo:'Geometry', optEng:'English', optGen:'General',
+    btnAsk:'🎓 Ask AI', btnDemoGeo:'📐 Geometry Demo', btnDemoEng:'🗣 English Demo', btnSpeak:'🔊 Read result aloud', btnStop:'⏹ Stop reading',
+    planTitle:'📅 Study Plan', lblWeak:'Weakness', lblTime:'Time per day',
+    btnPlan:'📅 Generate 7-day plan', btnReport:'📊 Progress Report',
+    ocrTitle:'📷 Read Document (OCR)', ocrHint:'Upload an image or PDF of a worksheet. The system will read and explain it by voice.',
+    btnOCR:'🔍 Recognize & Read', resultTitle:'📋 Result',
+    resultReady:'Ready. Ask a question or choose a Demo.',
+    voiceLabel:'Voice', gvYes:'Configured', gvNo:'Not configured',
+    speaking:'Speaking...', stopped:'Reading stopped.', defaultQ:'Explain the Pythagorean theorem for a Grade 8 low-vision student.',
+    weakDefault:'geometry', timeDefault:'25 minutes per day',
+    demoGeo:'Explain the Pythagorean theorem for a visually impaired Grade 8 student using tactile examples.',
+    demoEng:'Please correct: I have many meeting today',
+    ttsLang:'en-US', ttsVoiceHint:'Samantha (en-US)',
+  }
+};
 
-    async function ocr() {
-      const input = document.getElementById('ocrFile');
-      if (!input.files.length) return;
-      const form = new FormData();
-      form.append('file', input.files[0]);
-      form.append('language', document.getElementById('language').value);
-      const res = await fetch('/ocr', { method: 'POST', body: form });
-      document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
-    }
+function setLang(lang) {
+  LANG = lang;
+  localStorage.setItem('ev_lang', lang);
+  const T = UI[lang];
+  // Toggle button states
+  document.getElementById('btn-vi').classList.toggle('active', lang === 'vi');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-vi').setAttribute('aria-pressed', lang === 'vi');
+  document.getElementById('btn-en').setAttribute('aria-pressed', lang === 'en');
+  document.getElementById('html-root').lang = T.htmlLang;
+  // UI text
+  document.getElementById('hero-title').textContent = T.heroTitle;
+  document.getElementById('hero-lead').textContent = T.heroLead;
+  document.getElementById('tutor-title').textContent = T.tutorTitle;
+  document.getElementById('lbl-subject').textContent = T.lblSubject;
+  document.getElementById('lbl-student').textContent = T.lblStudent;
+  document.getElementById('lbl-question').textContent = T.lblQuestion;
+  document.getElementById('opt-geo').textContent = T.optGeo;
+  document.getElementById('opt-eng').textContent = T.optEng;
+  document.getElementById('opt-gen').textContent = T.optGen;
+  document.getElementById('btn-ask').textContent = T.btnAsk;
+  document.getElementById('btn-demo-geo').textContent = T.btnDemoGeo;
+  document.getElementById('btn-demo-eng').textContent = T.btnDemoEng;
+  updateSpeakButton();
+  document.getElementById('plan-title').textContent = T.planTitle;
+  document.getElementById('lbl-weak').textContent = T.lblWeak;
+  document.getElementById('lbl-time').textContent = T.lblTime;
+  document.getElementById('btn-plan').textContent = T.btnPlan;
+  document.getElementById('btn-report').textContent = T.btnReport;
+  document.getElementById('ocr-title').textContent = T.ocrTitle;
+  document.getElementById('ocr-hint').textContent = T.ocrHint;
+  document.getElementById('btn-ocr').textContent = T.btnOCR;
+  document.getElementById('result-title').textContent = T.resultTitle;
+  document.getElementById('voice-label').textContent = T.voiceLabel;
+  document.getElementById('voice-val').textContent = T.ttsVoiceHint;
+  // Update default question and inputs
+  document.getElementById('question').value = T.defaultQ;
+  document.getElementById('weakness').value = T.weakDefault;
+  document.getElementById('time').value = T.timeDefault;
+  document.getElementById('result').textContent = T.resultReady;
+  document.getElementById('speaking-text').textContent = T.speaking;
+  stopSpeech(false);
+}
 
-    async function speakResult() {
-      const text = document.getElementById('result').textContent;
-      const res = await fetch('/tts', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({text, language: document.getElementById('language').value})
-      });
-      const data = await res.json();
-      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-      if (data.audio_url) window.open(data.audio_url, '_blank');
-    }
-    async function resetDemo() {
-      const res = await fetch('/demo/reset', { method: 'POST' });
-      document.getElementById('result').textContent = JSON.stringify(await res.json(), null, 2);
-    }
-  </script>
-  <script>refreshStatus();</script>
+// ── TTS (Web Speech API — bilingual) ───────────────────────────────────────
+window.eduvisionIsSpeaking = false;
+window.eduvisionCurrentUtterance = null;
+
+function updateSpeakButton() {
+  const btn = document.getElementById('btn-speak');
+  if (!btn) return;
+  const T = UI[LANG];
+  btn.textContent = window.eduvisionIsSpeaking ? T.btnStop : T.btnSpeak;
+  btn.setAttribute('aria-label', window.eduvisionIsSpeaking ? T.btnStop : T.btnSpeak);
+  btn.setAttribute('aria-pressed', window.eduvisionIsSpeaking ? 'true' : 'false');
+}
+
+function stopSpeech(showMessage = true) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  window.eduvisionIsSpeaking = false;
+  window.eduvisionCurrentUtterance = null;
+  const badge = document.getElementById('speaking-badge');
+  if (badge) badge.classList.remove('show');
+  updateSpeakButton();
+  if (showMessage) {
+    const result = document.getElementById('result');
+    if (result) result.setAttribute('aria-label', UI[LANG].stopped);
+  }
+}
+
+function speakText(text, lang) {
+  if (!window.speechSynthesis) return;
+  stopSpeech(false);
+  const badge = document.getElementById('speaking-badge');
+  const clean = text.replace(/[#*`{}"]/g, '').replace(/\\n{2,}/g, ' ').slice(0, 3000);
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.lang = UI[lang].ttsLang;
+  utt.rate = lang === 'vi' ? 0.88 : 0.92;
+  utt.pitch = 1.0;
+  // Pick best matching voice
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = lang === 'vi' ? ['Linh','vi'] : ['Samantha','en-US','en-GB','en'];
+  for (const hint of preferred) {
+    const v = voices.find(x => x.name.includes(hint) || x.lang.startsWith(hint));
+    if (v) { utt.voice = v; break; }
+  }
+  window.eduvisionCurrentUtterance = utt;
+  utt.onstart = () => {
+    window.eduvisionIsSpeaking = true;
+    badge.classList.add('show');
+    updateSpeakButton();
+  };
+  utt.onend = utt.onerror = () => {
+    window.eduvisionIsSpeaking = false;
+    window.eduvisionCurrentUtterance = null;
+    badge.classList.remove('show');
+    updateSpeakButton();
+  };
+  window.speechSynthesis.speak(utt);
+}
+
+// ── LOADING HELPERS ─────────────────────────────────────────────────────────
+function showLoading() { document.getElementById('loading-bar').style.display='block'; }
+function hideLoading() { document.getElementById('loading-bar').style.display='none'; }
+function setResult(data) {
+  let text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  document.getElementById('result').textContent = text;
+  // Auto-speak answer_text or answer field
+  let toSpeak = '';
+  if (data && data.answer_text) toSpeak = data.answer_text;
+  else if (data && data.answer) toSpeak = data.answer;
+  else if (data && data.accessible_explanation) toSpeak = data.accessible_explanation;
+  else if (typeof data === 'string') toSpeak = data;
+  if (toSpeak) speakText(toSpeak, LANG);
+}
+
+// ── DEMO PROMPTS ────────────────────────────────────────────────────────────
+function loadDemo(kind) {
+  const T = UI[LANG];
+  document.getElementById('subject').value = kind;
+  document.getElementById('question').value = kind === 'geometry' ? T.demoGeo : T.demoEng;
+}
+
+// ── API CALLS ────────────────────────────────────────────────────────────────
+async function askTutor() {
+  showLoading();
+  try {
+    const res = await fetch('/ask', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        student_id: document.getElementById('student').value,
+        subject: document.getElementById('subject').value,
+        question: document.getElementById('question').value,
+        language: LANG
+      })
+    });
+    setResult(await res.json());
+  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+  finally { hideLoading(); }
+}
+
+async function studyPlan() {
+  showLoading();
+  try {
+    const res = await fetch('/study-plan', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        student_id: document.getElementById('student').value,
+        grade: LANG === 'vi' ? 'Lớp 8' : 'Grade 8',
+        weakness: document.getElementById('weakness').value,
+        available_time: document.getElementById('time').value,
+        language: LANG
+      })
+    });
+    setResult(await res.json());
+  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+  finally { hideLoading(); }
+}
+
+async function report() {
+  showLoading();
+  try {
+    const res = await fetch('/report/' + encodeURIComponent(document.getElementById('student').value));
+    setResult(await res.json());
+  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+  finally { hideLoading(); }
+}
+
+async function ocr() {
+  const input = document.getElementById('ocrFile');
+  if (!input.files.length) {
+    alert(LANG === 'vi' ? 'Vui lòng chọn file ảnh hoặc PDF' : 'Please select an image or PDF file');
+    return;
+  }
+  showLoading();
+  try {
+    const form = new FormData();
+    form.append('file', input.files[0]);
+    form.append('language', LANG);
+    const res = await fetch('/ocr', {method:'POST', body:form});
+    setResult(await res.json());
+  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+  finally { hideLoading(); }
+}
+
+function speakResult() {
+  if (window.eduvisionIsSpeaking || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+    stopSpeech(true);
+    return;
+  }
+  const text = document.getElementById('result').textContent;
+  speakText(text, LANG);
+}
+
+// ── STATUS CHECK ─────────────────────────────────────────────────────────────
+async function refreshStatus() {
+  try {
+    const res = await fetch('/health');
+    const data = await res.json();
+    const T = UI[LANG];
+    document.getElementById('status').innerHTML = `
+      <div class="stat"><strong>Backend</strong><span>${data.status} v${data.version}</span></div>
+      <div class="stat"><strong>OCR</strong><span>${data.ocr.recommended_provider}</span></div>
+      <div class="stat"><strong id="voice-label">${T.voiceLabel}</strong><span id="voice-val">${T.ttsVoiceHint}</span></div>
+      <div class="stat"><strong>Google Vision</strong><span id="gv-val">${data.ocr.google_credentials_file_exists ? T.gvYes : T.gvNo}</span></div>`;
+  } catch(e) {
+    document.getElementById('status').innerHTML = '<div class="stat"><strong>Backend</strong><span style="color:red">Offline</span></div>';
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+// Ensure voices are loaded before first use
+window.speechSynthesis && window.speechSynthesis.getVoices();
+window.speechSynthesis && window.speechSynthesis.addEventListener('voiceschanged', () => {});
+// Apply saved language on load
+setLang(LANG);
+refreshStatus();
+</script>
 </body>
-</html>
-"""
-
+</html>"""
 
 @app.get("/health")
 def health() -> Dict[str, Any]:
