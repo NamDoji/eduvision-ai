@@ -453,11 +453,10 @@ def web_demo() -> str:
     body{margin:0;background:var(--soft);color:var(--ink);overflow-x:hidden;font-size:17px}
     header{background:#fff;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:100}
     .topbar{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--blue);font-size:20px}
-    .mark{width:40px;height:40px;border-radius:8px;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:900;font-size:16px;flex-shrink:0}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--blue);font-size:20px;min-width:0}
     /* LANG TOGGLE */
-    .lang-toggle{display:flex;gap:0;border:2px solid var(--blue);border-radius:10px;overflow:hidden;flex-shrink:0}
-    .lang-toggle button{padding:10px 20px;font-size:16px;font-weight:700;border:none;cursor:pointer;transition:background 0.15s,color 0.15s;min-height:44px;min-width:64px}
+    .lang-toggle{display:inline-flex;flex-wrap:nowrap;gap:0;border:2px solid var(--blue);border-radius:10px;overflow:hidden;flex-shrink:0;white-space:nowrap}
+    .lang-toggle button{padding:10px 18px;font-size:16px;font-weight:700;border:none;cursor:pointer;transition:background 0.15s,color 0.15s;min-height:44px;min-width:72px;white-space:nowrap;flex:1 1 0}
     .lang-toggle button.active{background:var(--blue);color:#fff}
     .lang-toggle button:not(.active){background:#fff;color:var(--blue)}
     .lang-toggle button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
@@ -492,8 +491,8 @@ def web_demo() -> str:
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .speaking-badge{display:none;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 14px;color:#15803d;font-weight:600;font-size:15px;margin-top:10px;align-items:center;gap:8px}
     .speaking-badge.show{display:flex}
-    @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}}
-    @media(max-width:480px){.topbar{flex-direction:column;align-items:flex-start}.lang-toggle button{padding:9px 14px;font-size:15px}}
+    @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{width:auto;max-width:100%}}
+    @media(max-width:480px){.topbar{padding:12px 16px}.brand{font-size:18px}.lang-toggle button{padding:9px 12px;font-size:14px;min-width:62px}}
   </style>
 </head>
 <body>
@@ -502,7 +501,6 @@ def web_demo() -> str:
 <header>
   <div class="topbar">
     <div class="brand">
-      <div class="mark">EV</div>
       <div>EduVision AI</div>
     </div>
     <!-- LANGUAGE TOGGLE -->
@@ -513,7 +511,7 @@ def web_demo() -> str:
   </div>
   <div class="hero-wrap">
     <h1 id="hero-title">Trợ lý học tập thông minh cho học sinh khiếm thị</h1>
-    <p class="lead" id="hero-lead">Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, kế hoạch học tập và giọng nói song ngữ.</p>
+    <p class="lead" id="hero-lead">Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, lập kế hoạch học tập và giọng nói song ngữ.</p>
   </div>
 </header>
 
@@ -602,13 +600,13 @@ let LANG = localStorage.getItem('ev_lang') || 'vi';
 const UI = {
   vi: {
     htmlLang:'vi', heroTitle:'Trợ lý học tập thông minh cho học sinh khiếm thị',
-    heroLead:'Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, kế hoạch học tập và giọng nói song ngữ.',
+    heroLead:'Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, lập kế hoạch học tập và giọng nói song ngữ.',
     tutorTitle:'🤖 AI Gia sư', lblSubject:'Môn học', lblStudent:'Mã học sinh', lblQuestion:'Câu hỏi',
     optGeo:'Hình học', optEng:'Tiếng Anh', optGen:'Tổng hợp',
     btnAsk:'🎓 Hỏi AI', btnDemoGeo:'📐 Demo Hình học', btnDemoEng:'🗣 Demo Tiếng Anh', btnSpeak:'🔊 Đọc to kết quả', btnStop:'⏹ Dừng đọc',
     planTitle:'📅 Kế hoạch học tập', lblWeak:'Điểm yếu', lblTime:'Thời gian mỗi ngày',
     btnPlan:'📅 Tạo kế hoạch 7 ngày', btnReport:'📊 Báo cáo tiến độ',
-    ocrTitle:'📷 Đọc tài liệu (OCR)', ocrHint:'Chụp ảnh bài tập hoặc PDF, hệ thống sẽ đọc và giải thích bằng giọng nói.',
+    ocrTitle:'📷 Đọc tài liệu (OCR)', ocrHint:'Chụp ảnh bài tập hoặc tải PDF lên, hệ thống sẽ đọc và giải thích bằng giọng nói.',
     btnOCR:'🔍 Nhận diện & Đọc', resultTitle:'📋 Kết quả',
     resultReady:'Sẵn sàng. Hãy đặt câu hỏi hoặc chọn Demo.',
     voiceLabel:'Giọng nói', gvYes:'Đã cấu hình', gvNo:'Chưa cấu hình',
@@ -626,7 +624,7 @@ const UI = {
     btnAsk:'🎓 Ask AI', btnDemoGeo:'📐 Geometry Demo', btnDemoEng:'🗣 English Demo', btnSpeak:'🔊 Read result aloud', btnStop:'⏹ Stop reading',
     planTitle:'📅 Study Plan', lblWeak:'Weakness', lblTime:'Time per day',
     btnPlan:'📅 Generate 7-day plan', btnReport:'📊 Progress Report',
-    ocrTitle:'📷 Read Document (OCR)', ocrHint:'Upload an image or PDF of a worksheet. The system will read and explain it by voice.',
+    ocrTitle:'📷 Read Document (OCR)', ocrHint:'Upload an image or a PDF worksheet. The system will read it and explain it aloud.',
     btnOCR:'🔍 Recognize & Read', resultTitle:'📋 Result',
     resultReady:'Ready. Ask a question or choose a Demo.',
     voiceLabel:'Voice', gvYes:'Configured', gvNo:'Not configured',
