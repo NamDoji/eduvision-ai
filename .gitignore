@@ -22,3 +22,4 @@ audio_outputs/*
 
 # Logs
 *.log
+.vercel
