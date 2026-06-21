@@ -459,21 +459,22 @@ def web_demo() -> str:
     *{box-sizing:border-box}
     body{margin:0;background:var(--soft);color:var(--ink);overflow-x:hidden;font-size:17px}
     header{background:#fff;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:100}
-    .topbar{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--blue);font-size:20px;min-width:0}
+    .topbar{max-width:1180px;margin:0 auto;padding:12px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--blue);font-size:20px;min-width:0;line-height:1.15}
+    .brand div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     /* LANG TOGGLE */
-    .lang-toggle{display:inline-flex;flex-wrap:nowrap;gap:0;border:2px solid var(--blue);border-radius:10px;overflow:hidden;flex-shrink:0;white-space:nowrap}
-    .lang-toggle button{padding:10px 18px;font-size:16px;font-weight:700;border:none;cursor:pointer;transition:background 0.15s,color 0.15s;min-height:44px;min-width:72px;white-space:nowrap;flex:1 1 0}
+    .lang-toggle{display:inline-flex;flex-wrap:nowrap;gap:0;border:2px solid var(--blue);border-radius:10px;overflow:hidden;flex:0 0 auto;white-space:nowrap}
+    .lang-toggle button{padding:9px 16px;font-size:15px;font-weight:800;border:none;cursor:pointer;transition:background 0.15s,color 0.15s;min-height:42px;min-width:58px;white-space:nowrap;flex:0 0 auto}
     .lang-toggle button.active{background:var(--blue);color:#fff}
     .lang-toggle button:not(.active){background:#fff;color:var(--blue)}
     .lang-toggle button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     /* LOADING BAR */
     #loading-bar{display:none;position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--red),#e85d8a,var(--red));background-size:200%;animation:loadbar 1s linear infinite;z-index:9999}
     @keyframes loadbar{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    .hero-wrap{max-width:1180px;margin:0 auto;padding:20px 20px 12px}
-    h1{margin:0;font-size:clamp(24px,3.5vw,46px);line-height:1.08;color:var(--blue)}
-    .lead{color:var(--muted);font-size:clamp(15px,1.6vw,17px);line-height:1.55;margin:10px 0 0}
-    main{max-width:1180px;margin:0 auto;padding:10px 20px 50px}
+    .hero-wrap{max-width:1180px;margin:0 auto;padding:16px 20px 12px}
+    h1{margin:0;font-size:clamp(24px,3.5vw,44px);line-height:1.12;color:var(--blue);overflow-wrap:break-word}
+    .lead{color:var(--muted);font-size:clamp(15px,1.6vw,17px);line-height:1.5;margin:8px 0 0;max-width:860px}
+    main{max-width:1180px;margin:0 auto;padding:10px 20px 44px}
     .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}
     .stat,.card{background:var(--panel);border:1px solid var(--line);border-radius:10px}
     .stat{padding:14px}
@@ -481,7 +482,7 @@ def web_demo() -> str:
     .stat span{font-weight:700;font-size:16px;word-break:break-all}
     .grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,0.9fr);gap:16px;align-items:start}
     .card{padding:20px;margin-bottom:14px}
-    h2{margin:0 0 14px;font-size:20px;color:var(--blue)}
+    h2{margin:0 0 14px;font-size:20px;color:var(--blue);line-height:1.25}
     label{display:block;font-weight:700;margin:14px 0 6px;font-size:15px}
     textarea,input,select{width:100%;padding:12px;border:1.5px solid #c7d0dd;border-radius:8px;font-size:16px;background:#fff;font-family:inherit}
     textarea{min-height:110px;resize:vertical}
@@ -493,13 +494,14 @@ def web_demo() -> str:
     .btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     .btn:disabled{opacity:0.5;cursor:not-allowed}
     .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-    pre{white-space:pre-wrap;background:#111827;color:#e8eef8;border-radius:10px;padding:18px;min-height:340px;max-height:600px;overflow:auto;line-height:1.5;word-break:break-word;font-size:14px}
+    pre{white-space:pre-wrap;background:#111827;color:#e8eef8;border-radius:10px;padding:18px;min-height:340px;max-height:600px;overflow:auto;line-height:1.55;word-break:break-word;font-size:14px}
     .result-panel{position:sticky;top:80px}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .speaking-badge{display:none;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 14px;color:#15803d;font-weight:600;font-size:15px;margin-top:10px;align-items:center;gap:8px}
     .speaking-badge.show{display:flex}
-    @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{width:auto;max-width:100%}}
-    @media(max-width:480px){.topbar{padding:12px 16px}.brand{font-size:18px}.lang-toggle button{padding:9px 12px;font-size:14px;min-width:62px}}
+    @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
+    @media(max-width:560px){body{font-size:16px}.topbar{padding:10px 14px;gap:8px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.lang-toggle button{padding:8px 12px;font-size:14px;min-width:50px}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
+    @media(max-width:360px){.brand{font-size:15px}.lang-toggle button{padding:7px 10px;min-width:46px}.status{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -512,13 +514,13 @@ def web_demo() -> str:
     </div>
     <!-- LANGUAGE TOGGLE -->
     <div class="lang-toggle" role="group" aria-label="Chọn ngôn ngữ / Select language">
-      <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Chuyển sang Tiếng Việt">🇻🇳 VI</button>
-      <button id="btn-en" onclick="setLang('en')" aria-pressed="false" aria-label="Switch to English">🇬🇧 EN</button>
+      <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Chuyển sang Tiếng Việt">VI</button>
+      <button id="btn-en" onclick="setLang('en')" aria-pressed="false" aria-label="Switch to English">EN</button>
     </div>
   </div>
   <div class="hero-wrap">
-    <h1 id="hero-title">Trợ lý học tập thông minh cho học sinh khiếm thị</h1>
-    <p class="lead" id="hero-lead">Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, lập kế hoạch học tập và giọng nói song ngữ.</p>
+    <h1 id="hero-title">Trợ lý học tập cho học sinh khiếm thị</h1>
+    <p class="lead" id="hero-lead">Giải thích bài học bằng ngôn ngữ dễ hiểu, hỗ trợ hình học, tiếng Anh, đọc tài liệu OCR và lập kế hoạch học tập song ngữ.</p>
   </div>
 </header>
 
@@ -594,7 +596,7 @@ def web_demo() -> str:
     <div class="result-panel">
       <div class="card">
         <h2 id="result-title">📋 Kết quả</h2>
-        <pre id="result" aria-live="polite" aria-label="Kết quả từ AI">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn Demo.</pre>
+        <pre id="result" aria-live="polite" aria-label="Kết quả từ AI">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.</pre>
       </div>
     </div>
   </div>
@@ -606,8 +608,8 @@ let LANG = localStorage.getItem('ev_lang') || 'vi';
 
 const UI = {
   vi: {
-    htmlLang:'vi', heroTitle:'Trợ lý học tập thông minh cho học sinh khiếm thị',
-    heroLead:'Hỗ trợ Toán hình học, Tiếng Anh, OCR tài liệu, lập kế hoạch học tập và giọng nói song ngữ.',
+    htmlLang:'vi', heroTitle:'Trợ lý học tập cho học sinh khiếm thị',
+    heroLead:'Giải thích bài học bằng ngôn ngữ dễ hiểu, hỗ trợ hình học, tiếng Anh, đọc tài liệu OCR và lập kế hoạch học tập song ngữ.',
     tutorTitle:'🤖 AI Gia sư', lblSubject:'Môn học', lblStudent:'Mã học sinh', lblQuestion:'Câu hỏi',
     optGeo:'Hình học', optEng:'Tiếng Anh', optGen:'Tổng hợp',
     btnAsk:'🎓 Hỏi AI', btnDemoGeo:'📐 Demo Hình học', btnDemoEng:'🗣 Demo Tiếng Anh', btnSpeak:'🔊 Đọc to kết quả', btnStop:'⏹ Dừng đọc',
@@ -615,7 +617,7 @@ const UI = {
     btnPlan:'📅 Tạo kế hoạch 7 ngày', btnReport:'📊 Báo cáo tiến độ',
     ocrTitle:'📷 Đọc tài liệu (OCR)', ocrHint:'Chụp ảnh bài tập hoặc tải PDF lên, hệ thống sẽ đọc và giải thích bằng giọng nói.',
     btnOCR:'🔍 Nhận diện & Đọc', resultTitle:'📋 Kết quả',
-    resultReady:'Sẵn sàng. Hãy đặt câu hỏi hoặc chọn Demo.',
+    resultReady:'Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.',
     voiceLabel:'Giọng nói', gvYes:'Đã cấu hình', gvNo:'Chưa cấu hình',
     speaking:'Đang đọc...', stopped:'Đã dừng đọc.', defaultQ:'Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.',
     weakDefault:'hình học', timeDefault:'25 phút',
@@ -624,8 +626,8 @@ const UI = {
     ttsLang:'vi-VN', ttsVoiceHint:'Giọng Linh (vi-VN)',
   },
   en: {
-    htmlLang:'en', heroTitle:'Smart Learning Assistant for Visually Impaired Students',
-    heroLead:'Supports Geometry, English, OCR document reading, study planning, and bilingual voice output.',
+    htmlLang:'en', heroTitle:'Learning Assistant for Visually Impaired Students',
+    heroLead:'Clear spoken-friendly explanations for geometry, English, OCR document reading, and bilingual study planning.',
     tutorTitle:'🤖 AI Tutor', lblSubject:'Subject', lblStudent:'Student ID', lblQuestion:'Question',
     optGeo:'Geometry', optEng:'English', optGen:'General',
     btnAsk:'🎓 Ask AI', btnDemoGeo:'📐 Geometry Demo', btnDemoEng:'🗣 English Demo', btnSpeak:'🔊 Read result aloud', btnStop:'⏹ Stop reading',
@@ -633,7 +635,7 @@ const UI = {
     btnPlan:'📅 Generate 7-day plan', btnReport:'📊 Progress Report',
     ocrTitle:'📷 Read Document (OCR)', ocrHint:'Upload an image or a PDF worksheet. The system will read it and explain it aloud.',
     btnOCR:'🔍 Recognize & Read', resultTitle:'📋 Result',
-    resultReady:'Ready. Ask a question or choose a Demo.',
+    resultReady:'Ready. Ask a question or choose a demo to begin.',
     voiceLabel:'Voice', gvYes:'Configured', gvNo:'Not configured',
     speaking:'Speaking...', stopped:'Reading stopped.', defaultQ:'Explain the Pythagorean theorem for a Grade 8 low-vision student.',
     weakDefault:'geometry', timeDefault:'25 minutes per day',
@@ -748,8 +750,62 @@ function speakText(text, lang) {
 // ── LOADING HELPERS ─────────────────────────────────────────────────────────
 function showLoading() { document.getElementById('loading-bar').style.display='block'; }
 function hideLoading() { document.getElementById('loading-bar').style.display='none'; }
+
+function displayError(message) {
+  const fallback = LANG === 'vi' ? 'Không thể xử lý yêu cầu lúc này.' : 'The request could not be processed right now.';
+  document.getElementById('result').textContent = (LANG === 'vi' ? 'Lỗi: ' : 'Error: ') + (message || fallback);
+}
+
+function formatList(items) {
+  if (!Array.isArray(items) || !items.length) return '';
+  return items.map(item => '- ' + item).join('\\n');
+}
+
+function formatResult(data) {
+  if (typeof data === 'string') return data;
+  if (!data || typeof data !== 'object') return String(data ?? '');
+  if (data.detail) return (LANG === 'vi' ? 'Lỗi: ' : 'Error: ') + data.detail;
+
+  const sections = [];
+  if (data.answer) sections.push(data.answer);
+  if (data.weekly_plan) {
+    sections.push((LANG === 'vi' ? 'Kế hoạch 7 ngày' : '7-day plan') + '\\n' + formatList(data.weekly_plan));
+  }
+  if (data.description) sections.push((LANG === 'vi' ? 'Mô tả tài liệu' : 'Document description') + '\\n' + data.description);
+  if (data.ocr_text) sections.push((LANG === 'vi' ? 'Nội dung OCR' : 'OCR text') + '\\n' + data.ocr_text);
+  if (data.summary && !data.ocr_text) sections.push((LANG === 'vi' ? 'Tóm tắt' : 'Summary') + '\\n' + data.summary);
+  if (data.recommendation) sections.push((LANG === 'vi' ? 'Gợi ý' : 'Recommendation') + '\\n' + data.recommendation);
+  if (data.subject_counts) {
+    const counts = Object.entries(data.subject_counts).map(([key, value]) => `- ${key}: ${value}`).join('\\n');
+    sections.push((LANG === 'vi' ? 'Thống kê môn học' : 'Subject summary') + '\\n' + (counts || '- 0'));
+  }
+  if (data.recent_events && data.recent_events.length) {
+    const events = data.recent_events.slice(0, 5).map(event => `- ${event.subject}: ${event.input}`).join('\\n');
+    sections.push((LANG === 'vi' ? 'Hoạt động gần đây' : 'Recent activity') + '\\n' + events);
+  }
+  if (data.suggestions) sections.push((LANG === 'vi' ? 'Gợi ý tiếp theo' : 'Next suggestions') + '\\n' + formatList(data.suggestions));
+  if (data.context_used && data.context_used.length) {
+    sections.push((LANG === 'vi' ? 'Nguồn kiến thức đã dùng' : 'Context used') + '\\n' + formatList(data.context_used.slice(0, 3)));
+  }
+  return sections.length ? sections.join('\\n\\n') : JSON.stringify(data, null, 2);
+}
+
+async function readResponse(res) {
+  let data;
+  try {
+    data = await res.json();
+  } catch(e) {
+    data = await res.text();
+  }
+  if (!res.ok) {
+    const message = data && typeof data === 'object' ? (data.detail || data.message) : data;
+    throw new Error(message || res.statusText);
+  }
+  return data;
+}
+
 function setResult(data) {
-  let text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  let text = formatResult(data);
   document.getElementById('result').textContent = text;
   // Auto-speak answer_text or answer field
   let toSpeak = '';
@@ -780,8 +836,8 @@ async function askTutor() {
         language: LANG
       })
     });
-    setResult(await res.json());
-  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+    setResult(await readResponse(res));
+  } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
 
@@ -798,8 +854,8 @@ async function studyPlan() {
         language: LANG
       })
     });
-    setResult(await res.json());
-  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+    setResult(await readResponse(res));
+  } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
 
@@ -807,8 +863,8 @@ async function report() {
   showLoading();
   try {
     const res = await fetch('/report/' + encodeURIComponent(document.getElementById('student').value));
-    setResult(await res.json());
-  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+    setResult(await readResponse(res));
+  } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
 
@@ -824,8 +880,8 @@ async function ocr() {
     form.append('file', input.files[0]);
     form.append('language', LANG);
     const res = await fetch('/ocr', {method:'POST', body:form});
-    setResult(await res.json());
-  } catch(e) { document.getElementById('result').textContent = 'Error: ' + e.message; }
+    setResult(await readResponse(res));
+  } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
 
