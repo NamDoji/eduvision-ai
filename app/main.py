@@ -22,9 +22,10 @@ DATA_DIR = BASE_DIR / "data"
 PROFILE_FILE = DATA_DIR / "student_profiles.json"
 KB_FILE = DATA_DIR / "knowledge_base.md"
 TRAIN_CSV = DATA_DIR / "train.csv"
-DB_FILE = DATA_DIR / "eduvision.db"
-UPLOAD_DIR = BASE_DIR / "uploads"
-AUDIO_OUTPUT_DIR = BASE_DIR / "audio_outputs"
+WRITE_BASE_DIR = Path(os.environ.get("EDUVISION_WRITE_DIR", "/tmp/eduvision-ai")) if os.environ.get("VERCEL") else BASE_DIR
+DB_FILE = WRITE_BASE_DIR / "data" / "eduvision.db"
+UPLOAD_DIR = WRITE_BASE_DIR / "uploads"
+AUDIO_OUTPUT_DIR = WRITE_BASE_DIR / "audio_outputs"
 MEDIA_DIR = BASE_DIR / "media"
 TTS_DIR = AUDIO_OUTPUT_DIR
 
@@ -88,6 +89,7 @@ class TTSRequest(BaseModel):
 
 
 def db() -> sqlite3.Connection:
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
@@ -95,6 +97,7 @@ def db() -> sqlite3.Connection:
 
 def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     TTS_DIR.mkdir(parents=True, exist_ok=True)
     with db() as conn:
@@ -155,11 +158,15 @@ def save_profile(profile: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def log_event(student_id: str, subject: str, input_text: str, output_text: str) -> None:
-    with db() as conn:
-        conn.execute(
-            "INSERT INTO learning_events (student_id, subject, input, output, created_at) VALUES (?, ?, ?, ?, ?)",
-            (student_id, subject, input_text, output_text, datetime.utcnow().isoformat()),
-        )
+    try:
+        with db() as conn:
+            conn.execute(
+                "INSERT INTO learning_events (student_id, subject, input, output, created_at) VALUES (?, ?, ?, ?, ?)",
+                (student_id, subject, input_text, output_text, datetime.utcnow().isoformat()),
+            )
+    except sqlite3.OperationalError:
+        # Vercel filesystem is read-only for the deployed bundle; keep the app working.
+        return
 
 
 def normalize(text: str) -> List[str]:
