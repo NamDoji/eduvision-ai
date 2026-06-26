@@ -1131,7 +1131,7 @@ async function refreshStatus() {
       <div class="stat"><strong>Backend</strong><span>${data.status} v${data.version}</span></div>
       <div class="stat"><strong>OCR</strong><span>${data.ocr.recommended_provider}</span></div>
       <div class="stat"><strong id="voice-label">${T.voiceLabel}</strong><span id="voice-val">${T.ttsVoiceHint}</span></div>
-      <div class="stat"><strong>OCR.space</strong><span id="gv-val">${data.ocr.ocrspace_configured ? T.gvYes : T.gvNo}</span></div>`;
+      <div class="stat"><strong>OCR.space</strong><span id="gv-val">${data.ocr.ocrspace_demo_key ? '⚠️ Demo' : data.ocr.ocrspace_configured ? T.gvYes : T.gvNo}</span></div>`;
   } catch(e) {
     document.getElementById('status').innerHTML = '<div class="stat"><strong>Backend</strong><span style="color:red">Offline</span></div>';
   }

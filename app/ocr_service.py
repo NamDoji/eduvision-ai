@@ -27,7 +27,8 @@ def provider_status() -> dict[str, str | bool]:
     google_ok = importlib.util.find_spec("google.cloud.vision") is not None
     google_configured = bool(credentials and Path(credentials).exists())
     ocrspace_key = OCR_SPACE_API_KEY
-    ocrspace_configured = bool(ocrspace_key and ocrspace_key != "helloworld")
+    ocrspace_configured = bool(ocrspace_key)  # any key (incl. demo 'helloworld') enables OCR.space
+    ocrspace_demo = ocrspace_key == "helloworld"
 
     if OCR_PROVIDER != "auto":
         recommended = OCR_PROVIDER
@@ -47,6 +48,7 @@ def provider_status() -> dict[str, str | bool]:
     return {
         "configured_provider": OCR_PROVIDER,
         "ocrspace_configured": ocrspace_configured,
+        "ocrspace_demo_key": ocrspace_demo,
         "ocrspace_key_hint": ocrspace_key[:4] + "****" if ocrspace_key else "",
         "google_vision_package": google_ok,
         "google_application_credentials": credentials,
