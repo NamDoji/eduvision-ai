@@ -7,11 +7,16 @@ from pathlib import Path
 
 
 OCR_PROVIDER = os.environ.get("OCR_PROVIDER", "auto")
-# auto: tries google_vision → paddleocr → easyocr → tesseract
+# auto: tries ocrspace → google_vision → paddleocr → easyocr → tesseract
+# ocrspace:    OCR.space API (FREE 500 pages/day, cloud, works on Vercel)
 # google_vision: Google Cloud Vision (1000 free units/month)
-# paddleocr: PaddleOCR (free, local, good for Vietnamese)
-# easyocr: EasyOCR (free, local, good for multilingual)
-# tesseract: Tesseract (free, local, needs install)
+# paddleocr:   PaddleOCR (free, local, good for Vietnamese)
+# easyocr:     EasyOCR (free, local, good for multilingual)
+# tesseract:   Tesseract (free, local, needs install)
+
+OCR_SPACE_API_KEY = os.environ.get("OCR_SPACE_API_KEY", "helloworld")
+# Register free at https://ocr.space/ocrapi → get API key (500 pages/day, no credit card)
+# Use OCR_SPACE_API_KEY env var on Vercel. Default 'helloworld' is demo-only.
 
 
 def provider_status() -> dict[str, str | bool]:
@@ -21,9 +26,13 @@ def provider_status() -> dict[str, str | bool]:
     easy_ok = importlib.util.find_spec("easyocr") is not None
     google_ok = importlib.util.find_spec("google.cloud.vision") is not None
     google_configured = bool(credentials and Path(credentials).exists())
+    ocrspace_key = OCR_SPACE_API_KEY
+    ocrspace_configured = bool(ocrspace_key and ocrspace_key != "helloworld")
 
     if OCR_PROVIDER != "auto":
         recommended = OCR_PROVIDER
+    elif ocrspace_configured:
+        recommended = "ocrspace"
     elif google_configured:
         recommended = "google_vision"
     elif paddle_ok:
@@ -37,6 +46,8 @@ def provider_status() -> dict[str, str | bool]:
 
     return {
         "configured_provider": OCR_PROVIDER,
+        "ocrspace_configured": ocrspace_configured,
+        "ocrspace_key_hint": ocrspace_key[:4] + "****" if ocrspace_key else "",
         "google_vision_package": google_ok,
         "google_application_credentials": credentials,
         "google_credentials_file_exists": google_configured,
@@ -44,8 +55,9 @@ def provider_status() -> dict[str, str | bool]:
         "easyocr_available": easy_ok,
         "tesseract_available": tesseract,
         "recommended_provider": recommended,
-        "free_providers": ["paddleocr", "easyocr", "tesseract"],
-        "paid_with_free_tier": ["google_vision (1000 req/month free)"],
+        "free_cloud_providers": ["ocrspace (500 pages/day, register at ocr.space)"],
+        "free_local_providers": ["paddleocr", "easyocr", "tesseract"],
+        "paid_with_free_tier": ["google_vision (1000 req/month)"],
     }
 
 
@@ -112,3 +124,40 @@ def extract_with_easyocr(path: Path, lang: str = "vi") -> str:
         return "\n".join(lines).strip() or "EasyOCR did not find readable text."
     except Exception as exc:
         return f"EasyOCR failed: {exc}"
+
+
+def extract_with_ocrspace(path: Path, lang: str = "vi") -> str:
+    """OCR.space — FREE cloud OCR, 500 pages/day. Works on Vercel serverless.
+    Register free API key at https://ocr.space/ocrapi (no credit card).
+    Set OCR_SPACE_API_KEY env var on Vercel. Default 'helloworld' = demo only.
+    """
+    try:
+        import requests
+        lang_map = {"vi": "vie", "en": "eng"}
+        ocr_lang = lang_map.get(lang, "eng")
+        suffix = path.suffix.lower()
+        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".png": "image/png", ".pdf": "application/pdf",
+                    ".webp": "image/webp"}
+        mime = mime_map.get(suffix, "application/octet-stream")
+        with open(path, "rb") as f:
+            resp = requests.post(
+                "https://api.ocr.space/parse/image",
+                files={"file": (path.name, f, mime)},
+                data={
+                    "apikey": OCR_SPACE_API_KEY,
+                    "language": ocr_lang,
+                    "isTable": "true",
+                    "scale": "true",
+                    "OCREngine": "2",  # Engine 2 is more accurate
+                },
+                timeout=30,
+            )
+        result = resp.json()
+        if result.get("IsErroredOnProcessing"):
+            msgs = result.get("ErrorMessage") or []
+            return f"OCR.space failed: {'; '.join(msgs) if isinstance(msgs, list) else msgs}"
+        texts = [p.get("ParsedText", "") for p in result.get("ParsedResults", [])]
+        return "\n".join(texts).strip() or "OCR.space did not find readable text."
+    except Exception as exc:
+        return f"OCR.space failed: {exc}"

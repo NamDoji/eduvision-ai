@@ -353,9 +353,13 @@ def extract_image_text_tesseract(path: Path) -> str:
 
 
 def extract_image_text(path: Path, language: str = "vi") -> str:
-    from app.ocr_service import extract_with_paddleocr, extract_with_easyocr
+    from app.ocr_service import extract_with_paddleocr, extract_with_easyocr, extract_with_ocrspace
     status = ocr_status()
     provider = status.get("recommended_provider", "auto")
+
+    def try_ocrspace():
+        text = extract_with_ocrspace(path, language)
+        return text if text and "failed" not in text.lower() else None
 
     def try_google():
         text = extract_image_text_google_vision(path)
@@ -374,16 +378,18 @@ def extract_image_text(path: Path, language: str = "vi") -> str:
             return extract_image_text_tesseract(path)
         return None
 
+    if provider == "ocrspace":
+        return try_ocrspace() or try_google() or try_paddle() or try_easy() or try_tesseract() or "OCR not available."
     if provider == "google_vision":
-        return try_google() or try_paddle() or try_easy() or try_tesseract() or extract_image_text_google_vision(path)
+        return try_google() or try_ocrspace() or try_paddle() or try_easy() or try_tesseract() or "OCR not available."
     if provider == "paddleocr":
-        return try_paddle() or try_easy() or try_tesseract() or "OCR not available."
+        return try_paddle() or try_easy() or try_tesseract() or try_ocrspace() or "OCR not available."
     if provider == "easyocr":
-        return try_easy() or try_paddle() or try_tesseract() or "OCR not available."
+        return try_easy() or try_paddle() or try_tesseract() or try_ocrspace() or "OCR not available."
     if provider == "tesseract":
-        return try_tesseract() or try_paddle() or try_easy() or "OCR not available."
-    # auto: google_vision > paddleocr > easyocr > tesseract
-    return try_google() or try_paddle() or try_easy() or try_tesseract() or "OCR not available."
+        return try_tesseract() or try_paddle() or try_easy() or try_ocrspace() or "OCR not available."
+    # auto: ocrspace > google_vision > paddleocr > easyocr > tesseract
+    return try_ocrspace() or try_google() or try_paddle() or try_easy() or try_tesseract() or "OCR not available."
 
 
 def describe_ocr_text(text: str, language: str = "en") -> str:
@@ -700,7 +706,7 @@ def web_demo() -> str:
     <div class="stat"><strong>Backend</strong><span>Đang kiểm tra...</span></div>
     <div class="stat"><strong>OCR</strong><span>...</span></div>
     <div class="stat"><strong id="voice-label">Giọng nói</strong><span id="voice-val">...</span></div>
-    <div class="stat"><strong>Google Vision</strong><span id="gv-val">...</span></div>
+    <div class="stat"><strong>OCR.space</strong><span id="gv-val">...</span></div>
   </div>
 
   <div class="grid">
@@ -803,7 +809,7 @@ const UI = {
     ocrTitle:'📷 Đọc tài liệu (OCR)', ocrHint:'Chụp ảnh bài tập hoặc tải PDF lên, hệ thống sẽ đọc và giải thích bằng giọng nói.',
     btnOCR:'🔍 Nhận diện & Đọc', resultTitle:'📋 Kết quả',
     resultReady:'Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.',
-    voiceLabel:'Giọng nói', gvYes:'Đã cấu hình', gvNo:'Chưa cấu hình',
+    voiceLabel:'Giọng nói', gvYes:'✅ Đã cấu hình', gvNo:'⚠️ Dùng key demo',
     speaking:'Đang đọc...', stopped:'Đã dừng đọc.', defaultQ:'Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.',
     weakDefault:'geometry', timeDefault:'25',
     subjectOptions:[
@@ -832,7 +838,7 @@ const UI = {
     ocrTitle:'📷 Read Document (OCR)', ocrHint:'Upload an image or a PDF worksheet. The system will read it and explain it aloud.',
     btnOCR:'🔍 Recognize & Read', resultTitle:'📋 Result',
     resultReady:'Ready. Ask a question or choose a demo to begin.',
-    voiceLabel:'Voice', gvYes:'Configured', gvNo:'Not configured',
+    voiceLabel:'Voice', gvYes:'✅ Configured', gvNo:'⚠️ Demo key only',
     speaking:'Speaking...', stopped:'Reading stopped.', defaultQ:'Explain the Pythagorean theorem for a Grade 8 low-vision student.',
     weakDefault:'geometry', timeDefault:'25',
     subjectOptions:[
@@ -1125,7 +1131,7 @@ async function refreshStatus() {
       <div class="stat"><strong>Backend</strong><span>${data.status} v${data.version}</span></div>
       <div class="stat"><strong>OCR</strong><span>${data.ocr.recommended_provider}</span></div>
       <div class="stat"><strong id="voice-label">${T.voiceLabel}</strong><span id="voice-val">${T.ttsVoiceHint}</span></div>
-      <div class="stat"><strong>Google Vision</strong><span id="gv-val">${data.ocr.google_credentials_file_exists ? T.gvYes : T.gvNo}</span></div>`;
+      <div class="stat"><strong>OCR.space</strong><span id="gv-val">${data.ocr.ocrspace_configured ? T.gvYes : T.gvNo}</span></div>`;
   } catch(e) {
     document.getElementById('status').innerHTML = '<div class="stat"><strong>Backend</strong><span style="color:red">Offline</span></div>';
   }
