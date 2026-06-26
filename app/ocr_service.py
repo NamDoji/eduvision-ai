@@ -128,37 +128,56 @@ def extract_with_easyocr(path: Path, lang: str = "vi") -> str:
         return f"EasyOCR failed: {exc}"
 
 
+def _ocrspace_call(path: Path, ocr_lang: str, engine: str) -> dict:
+    """Internal: call OCR.space API and return parsed JSON."""
+    import requests
+    suffix = path.suffix.lower()
+    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".png": "image/png", ".pdf": "application/pdf",
+                ".webp": "image/webp"}
+    mime = mime_map.get(suffix, "application/octet-stream")
+    with open(path, "rb") as f:
+        resp = requests.post(
+            "https://api.ocr.space/parse/image",
+            files={"file": (path.name, f, mime)},
+            data={
+                "apikey": OCR_SPACE_API_KEY,
+                "language": ocr_lang,
+                "isTable": "true",
+                "scale": "true",
+                "OCREngine": engine,
+            },
+            timeout=30,
+        )
+    return resp.json()
+
+
 def extract_with_ocrspace(path: Path, lang: str = "vi") -> str:
-    """OCR.space — FREE cloud OCR, 500 pages/day. Works on Vercel serverless.
-    Register free API key at https://ocr.space/ocrapi (no credit card).
-    Set OCR_SPACE_API_KEY env var on Vercel. Default 'helloworld' = demo only.
+    """OCR.space — FREE cloud OCR, works on Vercel serverless.
+    - helloworld key (demo): English only, limited quota
+    - Registered free key (ocr.space/ocrapi): Vietnamese + 500 pages/day
     """
     try:
-        import requests
+        import requests  # noqa: F401 (ensure available)
         lang_map = {"vi": "vie", "en": "eng"}
         ocr_lang = lang_map.get(lang, "eng")
-        suffix = path.suffix.lower()
-        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                    ".png": "image/png", ".pdf": "application/pdf",
-                    ".webp": "image/webp"}
-        mime = mime_map.get(suffix, "application/octet-stream")
-        with open(path, "rb") as f:
-            resp = requests.post(
-                "https://api.ocr.space/parse/image",
-                files={"file": (path.name, f, mime)},
-                data={
-                    "apikey": OCR_SPACE_API_KEY,
-                    "language": ocr_lang,
-                    "isTable": "true",
-                    "scale": "true",
-                    "OCREngine": "2",  # Engine 2 is more accurate
-                },
-                timeout=30,
-            )
-        result = resp.json()
+        # Engine 2 = English only but more accurate; Engine 1 = multilingual
+        engine = "1" if ocr_lang != "eng" else "2"
+
+        result = _ocrspace_call(path, ocr_lang, engine)
+
+        # If language not supported (demo key), retry with English Engine 2
         if result.get("IsErroredOnProcessing"):
             msgs = result.get("ErrorMessage") or []
-            return f"OCR.space failed: {'; '.join(msgs) if isinstance(msgs, list) else msgs}"
+            err = "; ".join(msgs) if isinstance(msgs, list) else str(msgs)
+            if "E201" in err and ocr_lang != "eng":
+                # Demo key: fall back to English OCR (still reads text, just no VI optimisation)
+                result = _ocrspace_call(path, "eng", "2")
+                if result.get("IsErroredOnProcessing"):
+                    return f"OCR.space failed: {err} (fallback also failed)"
+            else:
+                return f"OCR.space failed: {err}"
+
         texts = [p.get("ParsedText", "") for p in result.get("ParsedResults", [])]
         return "\n".join(texts).strip() or "OCR.space did not find readable text."
     except Exception as exc:
