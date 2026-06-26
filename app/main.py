@@ -1179,34 +1179,36 @@ def get_demo_prompts() -> List[Dict[str, str]]:
 
 @app.post("/ask", response_model=AskResponse)
 def ask(payload: AskRequest) -> AskResponse:
+    from app.llm_service import ask_groq, GROQ_API_KEY
     profile = get_profile(payload.student_id)
     context = rag_search(payload.question)
     subject = payload.subject
+    grade = profile.get("grade", payload.grade or "Grade 8")
 
-    if subject == "geometry":
-        answer = accessible_geometry_answer(payload.question, profile, context, payload.language)
-        suggestions = (
-            ["Yêu cầu giải thích chậm hơn", "Xin bài tương tự", "Nghe phiên bản giọng nói"]
-            if payload.language == "vi"
-            else ["Ask for a slower explanation", "Ask for similar exercises", "Ask for an audio version"]
+    # Use Groq LLM when available, fall back to rule-based only for hardcoded demos
+    if GROQ_API_KEY:
+        answer = ask_groq(
+            question=payload.question,
+            subject=subject,
+            grade=grade,
+            context_chunks=context,
+            language=payload.language,
         )
+    elif subject == "geometry":
+        answer = accessible_geometry_answer(payload.question, profile, context, payload.language)
     elif subject == "english":
         answer = english_answer(payload.question, context, payload.language)
-        suggestions = (
-            ["Xin thêm ví dụ", "Luyện hội thoại ngắn", "Tạo 5 câu luyện tập"]
-            if payload.language == "vi"
-            else ["Ask for more examples", "Ask for a short dialogue", "Ask for 5 practice sentences"]
-        )
     else:
-        if payload.language == "vi":
-            answer = "Cô có thể hỗ trợ Toán hình, tiếng Anh, đọc ảnh/PDF bằng OCR và lập kế hoạch học tập. Em hãy nói môn học và phần em thấy khó."
-            suggestions = ["Thử /geometry", "Thử /english", "Thử /plan"]
-        else:
-            answer = (
-                "I can help with geometry, English, OCR reading, and study planning. "
-                "Please tell me the subject and what you find difficult."
-            )
-            suggestions = ["Try /geometry", "Try /english", "Try /plan"]
+        answer = (
+            "Cô có thể hỗ trợ Toán hình, tiếng Anh, đọc ảnh/PDF và lập kế hoạch học tập."
+            if payload.language == "vi"
+            else "I can help with geometry, English, OCR reading, and study planning."
+        )
+
+    if payload.language == "vi":
+        suggestions = ["Hỏi thêm về bài này", "Xin ví dụ thực tế", "Tạo bài tập tương tự"]
+    else:
+        suggestions = ["Ask a follow-up question", "Ask for a real-life example", "Generate a similar exercise"]
 
     log_event(payload.student_id, subject, payload.question, answer)
     safe_context = [sanitize_accessibility_context(item) for item in context]
