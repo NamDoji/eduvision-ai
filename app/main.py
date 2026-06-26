@@ -676,6 +676,8 @@ def web_demo() -> str:
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .speaking-badge{display:none;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 14px;color:#15803d;font-weight:600;font-size:15px;margin-top:10px;align-items:center;gap:8px}
     .speaking-badge.show{display:flex}
+    .btn-stop-inline{background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer;margin-left:10px}
+    .btn-stop-inline:hover{background:#b91c1c}
     @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
     @media(max-width:560px){body{font-size:16px}.topbar{padding:10px 14px;gap:8px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.lang-toggle button{padding:8px 12px;font-size:14px;min-width:50px}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
     @media(max-width:360px){.brand{font-size:15px}.lang-toggle button{padding:7px 10px;min-width:46px}.status{grid-template-columns:1fr}}
@@ -736,7 +738,7 @@ def web_demo() -> str:
           <button class="btn blue" onclick="loadDemo('english')" id="btn-demo-eng">🗣 Demo Tiếng Anh</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak">🔊 Đọc to kết quả</button>
         </div>
-        <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span></div>
+        <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span><button class="btn-stop-inline" onclick="stopSpeech(true)">⏹ Dừng</button></div>
       </div>
 
       <!-- STUDY PLAN -->
@@ -779,6 +781,7 @@ def web_demo() -> str:
         <input id="ocrFile" type="file" accept=".jpg,.jpeg,.png,.pdf" aria-label="Chọn ảnh hoặc PDF"/>
         <div class="actions">
           <button class="btn" onclick="ocr()" id="btn-ocr">🔍 Nhận diện & Đọc</button>
+          <button class="btn ghost" onclick="speakResult()" id="btn-speak-ocr">🔊 Đọc kết quả</button>
         </div>
       </div>
     </div>
@@ -1030,11 +1033,14 @@ async function readResponse(res) {
 function setResult(data) {
   let text = formatResult(data);
   document.getElementById('result').textContent = text;
-  // Auto-speak answer_text or answer field
+  // Auto-speak: answer > OCR description+text > plain string
   let toSpeak = '';
   if (data && data.answer_text) toSpeak = data.answer_text;
   else if (data && data.answer) toSpeak = data.answer;
   else if (data && data.accessible_explanation) toSpeak = data.accessible_explanation;
+  else if (data && data.description && data.ocr_text) {
+    toSpeak = data.description + '. ' + (LANG==='vi' ? 'Nội dung: ' : 'Content: ') + data.ocr_text.slice(0, 600);
+  } else if (data && data.ocr_text) toSpeak = data.ocr_text.slice(0, 800);
   else if (typeof data === 'string') toSpeak = data;
   if (toSpeak) speakText(toSpeak, LANG);
 }
