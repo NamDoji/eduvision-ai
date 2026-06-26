@@ -212,20 +212,8 @@ def rag_search(query: str, limit: int = 3) -> List[str]:
 
 
 def ocr_status() -> Dict[str, Any]:
-    credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    return {
-        "google_vision_package": importlib.util.find_spec("google.cloud.vision") is not None,
-        "google_application_credentials": credentials or "",
-        "google_credentials_file_exists": bool(credentials and Path(credentials).exists()),
-        "tesseract_available": shutil.which("tesseract") or "",
-        "recommended_provider": (
-            "google_vision"
-            if credentials and Path(credentials).exists()
-            else "tesseract"
-            if shutil.which("tesseract")
-            else "text_pdf_only"
-        ),
-    }
+    from app.ocr_service import provider_status
+    return provider_status()
 
 
 def default_voice(language: str) -> str:
@@ -364,15 +352,38 @@ def extract_image_text_tesseract(path: Path) -> str:
         return f"Tesseract image OCR failed: {exc}"
 
 
-def extract_image_text(path: Path) -> str:
+def extract_image_text(path: Path, language: str = "vi") -> str:
+    from app.ocr_service import extract_with_paddleocr, extract_with_easyocr
     status = ocr_status()
-    if status["recommended_provider"] == "google_vision":
+    provider = status.get("recommended_provider", "auto")
+
+    def try_google():
         text = extract_image_text_google_vision(path)
-        if text and "failed" not in text.lower() and "not configured" not in text.lower():
-            return text
-    if status["tesseract_available"]:
-        return extract_image_text_tesseract(path)
-    return extract_image_text_google_vision(path)
+        return text if text and "failed" not in text.lower() and "not configured" not in text.lower() else None
+
+    def try_paddle():
+        text = extract_with_paddleocr(path, language)
+        return text if text and "failed" not in text.lower() else None
+
+    def try_easy():
+        text = extract_with_easyocr(path, language)
+        return text if text and "failed" not in text.lower() else None
+
+    def try_tesseract():
+        if status.get("tesseract_available"):
+            return extract_image_text_tesseract(path)
+        return None
+
+    if provider == "google_vision":
+        return try_google() or try_paddle() or try_easy() or try_tesseract() or extract_image_text_google_vision(path)
+    if provider == "paddleocr":
+        return try_paddle() or try_easy() or try_tesseract() or "OCR not available."
+    if provider == "easyocr":
+        return try_easy() or try_paddle() or try_tesseract() or "OCR not available."
+    if provider == "tesseract":
+        return try_tesseract() or try_paddle() or try_easy() or "OCR not available."
+    # auto: google_vision > paddleocr > easyocr > tesseract
+    return try_google() or try_paddle() or try_easy() or try_tesseract() or "OCR not available."
 
 
 def describe_ocr_text(text: str, language: str = "en") -> str:
@@ -420,30 +431,190 @@ def parse_plan_message(content: str) -> StudyPlanRequest:
     return StudyPlanRequest(grade=grade, weakness=weakness, available_time=available_time)
 
 
+_SUBJECT_PLANS_VI: dict[str, list[str]] = {
+    "geometry": [
+        "Ngày 1: Ôn lại định nghĩa tam giác, góc, cạnh và mối quan hệ song song/vuông góc trong {time}.",
+        "Ngày 2: Học định lý Pythagore và trung tuyến bằng ví dụ xúc giác (dùng thước, dây).",
+        "Ngày 3: Làm 5 bài tập cơ bản về tam giác cân, tam giác vuông có gợi ý từng bước.",
+        "Ngày 4: Xem lại lỗi sai, yêu cầu giải thích chậm hơn và vẽ mô hình bằng tay.",
+        "Ngày 5: Tự giải 5 bài hình học không có gợi ý, nói kết quả bằng lời.",
+        "Ngày 6: Ôn toàn bộ — tam giác, góc, đường song song — mô tả lại bằng lời của em.",
+        "Ngày 7: Làm bài kiểm tra ngắn 5 câu hình học và cập nhật hồ sơ học tập.",
+    ],
+    "english": [
+        "Ngày 1: Ôn ngữ pháp cơ bản (thì hiện tại, quá khứ, tương lai) trong {time}.",
+        "Ngày 2: Học 10 từ vựng chủ đề gia đình/trường học kèm ví dụ câu đơn giản.",
+        "Ngày 3: Luyện sửa 5 câu sai (subject-verb agreement, many/much, countable/uncountable).",
+        "Ngày 4: Luyện hội thoại ngắn (giới thiệu bản thân, hỏi giờ, đặt đồ ăn).",
+        "Ngày 5: Viết 5 câu mô tả bản thân bằng tiếng Anh, không xem gợi ý.",
+        "Ngày 6: Ôn toàn bộ từ vựng và ngữ pháp tuần, đọc lại bằng giọng nói.",
+        "Ngày 7: Mini test 10 câu (grammar + vocabulary) và cập nhật hồ sơ học tập.",
+    ],
+    "algebra": [
+        "Ngày 1: Ôn phương trình bậc nhất một ẩn: khái niệm, nghiệm, cách giải trong {time}.",
+        "Ngày 2: Học hệ phương trình bậc nhất hai ẩn bằng ví dụ thực tế (tính tiền, tuổi).",
+        "Ngày 3: Làm 5 bài phương trình cơ bản có gợi ý từng bước.",
+        "Ngày 4: Xem lại lỗi sai, luyện thêm bài phân thức đại số.",
+        "Ngày 5: Giải độc lập 5 bài hệ phương trình và bất phương trình.",
+        "Ngày 6: Nói lại quy tắc giải phương trình bằng lời, không nhìn sách.",
+        "Ngày 7: Kiểm tra 5 bài toán đại số tổng hợp và cập nhật hồ sơ học tập.",
+    ],
+    "physics": [
+        "Ngày 1: Ôn các đại lượng vật lý cơ bản: lực, vận tốc, gia tốc, khối lượng trong {time}.",
+        "Ngày 2: Học định luật Newton 1 và 2 bằng ví dụ đời thực (đẩy xe, thả rơi).",
+        "Ngày 3: Làm 5 bài tập tính lực, gia tốc có gợi ý.",
+        "Ngày 4: Học về điện học cơ bản: điện trở, cường độ dòng điện, hiệu điện thế.",
+        "Ngày 5: Giải 5 bài vật lý độc lập (cơ học hoặc điện học).",
+        "Ngày 6: Nói lại các định luật Newton và Ohm bằng lời của em.",
+        "Ngày 7: Kiểm tra 5 bài vật lý tổng hợp và cập nhật hồ sơ học tập.",
+    ],
+    "chemistry": [
+        "Ngày 1: Ôn nguyên tử, phân tử, đơn chất, hợp chất trong {time}.",
+        "Ngày 2: Học cách cân bằng phương trình hóa học bước từng bước.",
+        "Ngày 3: Làm 5 bài cân bằng phương trình có gợi ý.",
+        "Ngày 4: Học tính theo phương trình hóa học (mol, khối lượng, thể tích).",
+        "Ngày 5: Giải 5 bài tính theo phương trình độc lập.",
+        "Ngày 6: Nói lại quy tắc cân bằng phương trình và tính mol bằng lời.",
+        "Ngày 7: Kiểm tra 5 bài hóa học tổng hợp và cập nhật hồ sơ.",
+    ],
+    "literature": [
+        "Ngày 1: Đọc và tóm tắt một đoạn văn ngắn trong {time}, ghi lại ý chính.",
+        "Ngày 2: Học các biện pháp tu từ: so sánh, ẩn dụ, nhân hóa kèm ví dụ.",
+        "Ngày 3: Phân tích 2 đoạn thơ hoặc văn xuôi về nhân vật/hình ảnh nổi bật.",
+        "Ngày 4: Luyện viết đoạn văn ngắn (5-7 câu) về cảm nhận tác phẩm.",
+        "Ngày 5: Viết đoạn văn mới không xem gợi ý, đọc to để tự kiểm tra.",
+        "Ngày 6: Nói lại nội dung tác phẩm đã học bằng lời của em.",
+        "Ngày 7: Mini test phân tích đoạn văn ngắn và cập nhật hồ sơ.",
+    ],
+    "history": [
+        "Ngày 1: Ôn mốc thời gian quan trọng và nhân vật lịch sử chính trong {time}.",
+        "Ngày 2: Học sự kiện Điện Biên Phủ hoặc Cách mạng tháng Tám theo trình tự thời gian.",
+        "Ngày 3: Trả lời 5 câu hỏi về nguyên nhân, diễn biến, kết quả sự kiện.",
+        "Ngày 4: Học sự kiện lịch sử thế giới liên quan và so sánh với Việt Nam.",
+        "Ngày 5: Kể lại một sự kiện lịch sử bằng lời của em trong 2 phút.",
+        "Ngày 6: Ôn toàn bộ mốc và nhân vật đã học trong tuần.",
+        "Ngày 7: Kiểm tra 5 câu hỏi lịch sử tổng hợp và cập nhật hồ sơ.",
+    ],
+    "geography": [
+        "Ngày 1: Ôn bản đồ Việt Nam: vị trí, các vùng kinh tế, địa hình trong {time}.",
+        "Ngày 2: Học khí hậu Việt Nam: miền Bắc/Trung/Nam và đặc điểm mùa.",
+        "Ngày 3: Trả lời 5 câu hỏi về dân số, đô thị hóa, tài nguyên thiên nhiên.",
+        "Ngày 4: Học địa lý kinh tế: nông nghiệp, công nghiệp, dịch vụ.",
+        "Ngày 5: Mô tả đặc điểm một vùng kinh tế bằng lời không xem sách.",
+        "Ngày 6: Ôn toàn bộ kiến thức địa lý đã học trong tuần.",
+        "Ngày 7: Kiểm tra 5 câu hỏi địa lý tổng hợp và cập nhật hồ sơ.",
+    ],
+}
+
+_SUBJECT_PLANS_EN: dict[str, list[str]] = {
+    "geometry": [
+        "Day 1: Review triangle definitions, angles, sides, parallel and perpendicular relationships for {time}.",
+        "Day 2: Learn the Pythagorean theorem and median using touch-based examples (ruler, string).",
+        "Day 3: Solve 5 basic exercises on isosceles and right triangles with step-by-step hints.",
+        "Day 4: Review mistakes, ask for slower explanations, and build a hand model.",
+        "Day 5: Independently solve 5 geometry problems, describing the answer verbally.",
+        "Day 6: Review all — triangles, angles, parallel lines — explain in your own words.",
+        "Day 7: Short 5-question geometry quiz and update the student profile.",
+    ],
+    "english": [
+        "Day 1: Review basic grammar tenses (present, past, future) for {time}.",
+        "Day 2: Learn 10 vocabulary words (family/school theme) with simple example sentences.",
+        "Day 3: Correct 5 sentences (subject-verb agreement, many/much, countable nouns).",
+        "Day 4: Practice short dialogues (introductions, asking the time, ordering food).",
+        "Day 5: Write 5 sentences describing yourself without looking at hints.",
+        "Day 6: Review all vocabulary and grammar from the week by reading aloud.",
+        "Day 7: Mini grammar + vocabulary test (10 questions) and update the student profile.",
+    ],
+    "algebra": [
+        "Day 1: Review linear equations in one variable: concept, solution steps for {time}.",
+        "Day 2: Learn simultaneous equations with real-life examples (money, ages).",
+        "Day 3: Solve 5 basic equations with guided hints.",
+        "Day 4: Review errors and practice algebraic fractions.",
+        "Day 5: Independently solve 5 simultaneous equations and inequalities.",
+        "Day 6: Explain the rules for solving equations aloud, without the textbook.",
+        "Day 7: Mixed algebra quiz (5 problems) and update the student profile.",
+    ],
+    "physics": [
+        "Day 1: Review key physical quantities: force, velocity, acceleration, mass for {time}.",
+        "Day 2: Learn Newton's First and Second Laws with real-life examples (pushing a cart, free fall).",
+        "Day 3: Solve 5 exercises on force and acceleration with guided hints.",
+        "Day 4: Study basic electricity: resistance, current intensity, voltage.",
+        "Day 5: Independently solve 5 physics problems (mechanics or electricity).",
+        "Day 6: Explain Newton's Laws and Ohm's Law aloud in your own words.",
+        "Day 7: Mixed physics quiz (5 problems) and update the student profile.",
+    ],
+    "chemistry": [
+        "Day 1: Review atoms, molecules, elements, and compounds for {time}.",
+        "Day 2: Learn to balance chemical equations step by step.",
+        "Day 3: Balance 5 chemical equations with guided hints.",
+        "Day 4: Study stoichiometry: mole, mass, volume calculations.",
+        "Day 5: Independently solve 5 stoichiometry problems.",
+        "Day 6: Explain balancing equations and mole calculations aloud without looking.",
+        "Day 7: Mixed chemistry quiz (5 problems) and update the student profile.",
+    ],
+    "literature": [
+        "Day 1: Read and summarize a short passage in {time}, write down the key ideas.",
+        "Day 2: Study literary devices: simile, metaphor, personification with examples.",
+        "Day 3: Analyze 2 poetry or prose extracts focusing on character and imagery.",
+        "Day 4: Write a short paragraph (5-7 sentences) expressing feelings about a work.",
+        "Day 5: Write a new paragraph without hints and read it aloud to self-check.",
+        "Day 6: Retell the content of a studied work in your own words.",
+        "Day 7: Mini literary analysis test and update the student profile.",
+    ],
+    "history": [
+        "Day 1: Review key dates and historical figures for {time}.",
+        "Day 2: Study the Dien Bien Phu or August Revolution in chronological order.",
+        "Day 3: Answer 5 questions on causes, events, and outcomes.",
+        "Day 4: Study related world history events and compare with Vietnam.",
+        "Day 5: Narrate a historical event in your own words for 2 minutes.",
+        "Day 6: Review all dates and figures studied this week.",
+        "Day 7: Mixed history quiz (5 questions) and update the student profile.",
+    ],
+    "geography": [
+        "Day 1: Review Vietnam's location, economic regions, and terrain for {time}.",
+        "Day 2: Study Vietnam's climate: North/Central/South and seasonal features.",
+        "Day 3: Answer 5 questions on population, urbanization, and natural resources.",
+        "Day 4: Study economic geography: agriculture, industry, and services.",
+        "Day 5: Describe one economic region's features aloud without the textbook.",
+        "Day 6: Review all geography topics studied this week.",
+        "Day 7: Mixed geography quiz (5 questions) and update the student profile.",
+    ],
+}
+
+# Keyword → subject key mapping
+_SUBJECT_ALIASES: dict[str, str] = {
+    # geometry
+    "geometry": "geometry", "hình học": "geometry", "toán hình": "geometry",
+    # english
+    "english": "english", "tiếng anh": "english", "anh văn": "english",
+    # algebra / math
+    "algebra": "algebra", "toán đại số": "algebra", "đại số": "algebra",
+    "math": "algebra", "toán": "algebra", "toán học": "algebra",
+    # physics
+    "physics": "physics", "vật lý": "physics",
+    # chemistry
+    "chemistry": "chemistry", "hóa học": "chemistry", "hóa": "chemistry",
+    # literature
+    "literature": "literature", "ngữ văn": "literature", "văn học": "literature", "văn": "literature",
+    # history
+    "history": "history", "lịch sử": "history",
+    # geography
+    "geography": "geography", "địa lý": "geography",
+}
+
+
 def localized_plan(payload: StudyPlanRequest) -> StudyPlanResponse:
+    subject_key = _SUBJECT_ALIASES.get(payload.weakness.lower().strip(), "geometry")
+    time_str = payload.available_time
+
     if payload.language == "vi":
-        return StudyPlanResponse(
-            weekly_plan=[
-                f"Ngày 1: Ôn lại kiến thức cơ bản về {payload.weakness} trong {payload.available_time}.",
-                "Ngày 2: Học một khái niệm mới bằng mô tả lời nói và ví dụ có thể sờ/chạm.",
-                "Ngày 3: Làm 5 bài tập cơ bản có gợi ý từng bước.",
-                "Ngày 4: Xem lại lỗi sai và yêu cầu giải thích chậm hơn nếu cần.",
-                "Ngày 5: Làm 5 bài tương tự một cách độc lập.",
-                "Ngày 6: Tự nói lại khái niệm bằng lời của mình.",
-                "Ngày 7: Làm bài kiểm tra ngắn và cập nhật hồ sơ học tập.",
-            ]
-        )
-    return StudyPlanResponse(
-        weekly_plan=[
-            f"Day 1: Review the basic ideas of {payload.weakness} for {payload.available_time}.",
-            "Day 2: Learn one concept using touch-based examples and simple words.",
-            "Day 3: Practice 5 basic exercises with step-by-step hints.",
-            "Day 4: Review mistakes and ask for a slower explanation.",
-            "Day 5: Do 5 similar exercises independently.",
-            "Day 6: Explain the concept back in your own words.",
-            "Day 7: Take a short review quiz and update the student profile.",
-        ]
-    )
+        templates = _SUBJECT_PLANS_VI.get(subject_key, _SUBJECT_PLANS_VI["geometry"])
+        plan = [day.replace("{time}", time_str) for day in templates]
+    else:
+        templates = _SUBJECT_PLANS_EN.get(subject_key, _SUBJECT_PLANS_EN["geometry"])
+        plan = [day.replace("{time}", time_str) for day in templates]
+
+    return StudyPlanResponse(weekly_plan=plan)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -568,11 +739,25 @@ def web_demo() -> str:
         <div class="row2">
           <div>
             <label for="weakness" id="lbl-weak">Điểm yếu</label>
-            <input id="weakness" value="hình học"/>
+            <select id="weakness">
+              <option value="geometry" id="opt-sub-geo">Hình học</option>
+              <option value="english" id="opt-sub-eng">Tiếng Anh</option>
+              <option value="algebra" id="opt-sub-alg">Toán đại số</option>
+              <option value="physics" id="opt-sub-phy">Vật lý</option>
+              <option value="chemistry" id="opt-sub-chem">Hóa học</option>
+              <option value="literature" id="opt-sub-lit">Ngữ văn</option>
+              <option value="history" id="opt-sub-hist">Lịch sử</option>
+              <option value="geography" id="opt-sub-geo2">Địa lý</option>
+            </select>
           </div>
           <div>
             <label for="time" id="lbl-time">Thời gian mỗi ngày</label>
-            <input id="time" value="25 phút"/>
+            <select id="time">
+              <option value="25" id="opt-time-25">25 phút</option>
+              <option value="45" id="opt-time-45">45 phút</option>
+              <option value="60" id="opt-time-60">60 phút</option>
+              <option value="120" id="opt-time-120">120 phút</option>
+            </select>
           </div>
         </div>
         <div class="actions">
@@ -620,7 +805,18 @@ const UI = {
     resultReady:'Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.',
     voiceLabel:'Giọng nói', gvYes:'Đã cấu hình', gvNo:'Chưa cấu hình',
     speaking:'Đang đọc...', stopped:'Đã dừng đọc.', defaultQ:'Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.',
-    weakDefault:'hình học', timeDefault:'25 phút',
+    weakDefault:'geometry', timeDefault:'25',
+    subjectOptions:[
+      {value:'geometry',label:'Hình học'},{value:'english',label:'Tiếng Anh'},
+      {value:'algebra',label:'Toán đại số'},{value:'physics',label:'Vật lý'},
+      {value:'chemistry',label:'Hóa học'},{value:'literature',label:'Ngữ văn'},
+      {value:'history',label:'Lịch sử'},{value:'geography',label:'Địa lý'},
+    ],
+    timeOptions:[
+      {value:'25',label:'25 phút'},{value:'45',label:'45 phút'},
+      {value:'60',label:'60 phút'},{value:'120',label:'120 phút'},
+    ],
+    timeUnit:'phút mỗi ngày',
     demoGeo:'Tam giác cân là gì? Giải thích dùng ví dụ xúc giác cho học sinh khiếm thị lớp 8.',
     demoEng:'Sửa câu sau: I have many meeting today',
     ttsLang:'vi-VN', ttsVoiceHint:'Giọng Linh (vi-VN)',
@@ -638,7 +834,18 @@ const UI = {
     resultReady:'Ready. Ask a question or choose a demo to begin.',
     voiceLabel:'Voice', gvYes:'Configured', gvNo:'Not configured',
     speaking:'Speaking...', stopped:'Reading stopped.', defaultQ:'Explain the Pythagorean theorem for a Grade 8 low-vision student.',
-    weakDefault:'geometry', timeDefault:'25 minutes per day',
+    weakDefault:'geometry', timeDefault:'25',
+    subjectOptions:[
+      {value:'geometry',label:'Geometry'},{value:'english',label:'English'},
+      {value:'algebra',label:'Algebra'},{value:'physics',label:'Physics'},
+      {value:'chemistry',label:'Chemistry'},{value:'literature',label:'Literature'},
+      {value:'history',label:'History'},{value:'geography',label:'Geography'},
+    ],
+    timeOptions:[
+      {value:'25',label:'25 minutes'},{value:'45',label:'45 minutes'},
+      {value:'60',label:'60 minutes'},{value:'120',label:'120 minutes'},
+    ],
+    timeUnit:'minutes per day',
     demoGeo:'Explain the Pythagorean theorem for a visually impaired Grade 8 student using tactile examples.',
     demoEng:'Please correct: I have many meeting today',
     ttsLang:'en-US', ttsVoiceHint:'Samantha (en-US)',
@@ -682,8 +889,18 @@ function setLang(lang) {
   document.getElementById('voice-val').textContent = T.ttsVoiceHint;
   // Update default question and inputs
   document.getElementById('question').value = T.defaultQ;
-  document.getElementById('weakness').value = T.weakDefault;
-  document.getElementById('time').value = T.timeDefault;
+  // Repopulate subject select
+  const weakSel = document.getElementById('weakness');
+  const prevWeak = weakSel ? weakSel.value : T.weakDefault;
+  if (weakSel) {
+    weakSel.innerHTML = T.subjectOptions.map(o => `<option value="${o.value}"${o.value===prevWeak?' selected':''}>${o.label}</option>`).join('');
+  }
+  // Repopulate time select
+  const timeSel = document.getElementById('time');
+  const prevTime = timeSel ? timeSel.value : T.timeDefault;
+  if (timeSel) {
+    timeSel.innerHTML = T.timeOptions.map(o => `<option value="${o.value}"${o.value===prevTime?' selected':''}>${o.label}</option>`).join('');
+  }
   document.getElementById('result').textContent = T.resultReady;
   document.getElementById('speaking-text').textContent = T.speaking;
   stopSpeech(false);
@@ -844,13 +1061,17 @@ async function askTutor() {
 async function studyPlan() {
   showLoading();
   try {
+    const T = UI[LANG];
+    const weakVal = document.getElementById('weakness').value;
+    const timeVal = document.getElementById('time').value;
+    const availableTime = `${timeVal} ${T.timeUnit}`;
     const res = await fetch('/study-plan', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         student_id: document.getElementById('student').value,
         grade: LANG === 'vi' ? 'Lớp 8' : 'Grade 8',
-        weakness: document.getElementById('weakness').value,
-        available_time: document.getElementById('time').value,
+        weakness: weakVal,
+        available_time: availableTime,
         language: LANG
       })
     });

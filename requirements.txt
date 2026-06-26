@@ -9,3 +9,5 @@ python-dotenv==1.0.1
 google-cloud-vision==3.8.1
 pytest==8.3.4
 httpx==0.28.1
+paddleocr>=2.7.0
+easyocr>=1.7.0

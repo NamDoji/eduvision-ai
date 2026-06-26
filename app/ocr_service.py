@@ -6,15 +6,46 @@ import shutil
 from pathlib import Path
 
 
+OCR_PROVIDER = os.environ.get("OCR_PROVIDER", "auto")
+# auto: tries google_vision → paddleocr → easyocr → tesseract
+# google_vision: Google Cloud Vision (1000 free units/month)
+# paddleocr: PaddleOCR (free, local, good for Vietnamese)
+# easyocr: EasyOCR (free, local, good for multilingual)
+# tesseract: Tesseract (free, local, needs install)
+
+
 def provider_status() -> dict[str, str | bool]:
     credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
     tesseract = shutil.which("tesseract") or ""
+    paddle_ok = importlib.util.find_spec("paddleocr") is not None
+    easy_ok = importlib.util.find_spec("easyocr") is not None
+    google_ok = importlib.util.find_spec("google.cloud.vision") is not None
+    google_configured = bool(credentials and Path(credentials).exists())
+
+    if OCR_PROVIDER != "auto":
+        recommended = OCR_PROVIDER
+    elif google_configured:
+        recommended = "google_vision"
+    elif paddle_ok:
+        recommended = "paddleocr"
+    elif easy_ok:
+        recommended = "easyocr"
+    elif tesseract:
+        recommended = "tesseract"
+    else:
+        recommended = "text_pdf_only"
+
     return {
-        "google_vision_package": importlib.util.find_spec("google.cloud.vision") is not None,
+        "configured_provider": OCR_PROVIDER,
+        "google_vision_package": google_ok,
         "google_application_credentials": credentials,
-        "google_credentials_file_exists": bool(credentials and Path(credentials).exists()),
+        "google_credentials_file_exists": google_configured,
+        "paddleocr_available": paddle_ok,
+        "easyocr_available": easy_ok,
         "tesseract_available": tesseract,
-        "recommended_provider": "google_vision" if credentials and Path(credentials).exists() else "tesseract" if tesseract else "text_pdf_only",
+        "recommended_provider": recommended,
+        "free_providers": ["paddleocr", "easyocr", "tesseract"],
+        "paid_with_free_tier": ["google_vision (1000 req/month free)"],
     }
 
 
@@ -47,3 +78,37 @@ def accessible_description(text: str, language: str = "en") -> str:
         "plain_text": "The material appears to be text. I will summarize it and explain the learning task.",
     }[kind]
 
+
+def extract_with_paddleocr(path: Path, lang: str = "vi") -> str:
+    """PaddleOCR — free, local, excellent for Vietnamese and math."""
+    try:
+        from paddleocr import PaddleOCR
+        ocr_lang = "vi" if lang in ("vi", "vn") else "en"
+        ocr = PaddleOCR(use_angle_cls=True, lang=ocr_lang, show_log=False)
+        result = ocr.ocr(str(path), cls=True)
+        lines = []
+        for block in result or []:
+            if block:
+                for line in block:
+                    if line and len(line) >= 2 and line[1]:
+                        text_info = line[1]
+                        if isinstance(text_info, (list, tuple)) and text_info:
+                            lines.append(str(text_info[0]))
+                        else:
+                            lines.append(str(text_info))
+        return "\n".join(lines).strip() or "PaddleOCR did not find readable text."
+    except Exception as exc:
+        return f"PaddleOCR failed: {exc}"
+
+
+def extract_with_easyocr(path: Path, lang: str = "vi") -> str:
+    """EasyOCR — free, local, supports 80+ languages including Vietnamese."""
+    try:
+        import easyocr
+        langs = ["vi", "en"] if lang == "vi" else ["en"]
+        reader = easyocr.Reader(langs, gpu=False, verbose=False)
+        result = reader.readtext(str(path))
+        lines = [item[1] for item in result if item and len(item) >= 2]
+        return "\n".join(lines).strip() or "EasyOCR did not find readable text."
+    except Exception as exc:
+        return f"EasyOCR failed: {exc}"
