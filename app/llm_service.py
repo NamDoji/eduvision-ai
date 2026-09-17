@@ -5,7 +5,8 @@ import os
 from typing import Any, Dict, List, Optional
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama3-70b-8192")
+GROQ_MODEL_FALLBACK = "llama3-8b-8192"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 BASE_SYSTEM_PROMPT = """You are EduVision AI — a warm, patient tutor for visually impaired and low-vision students.
@@ -83,31 +84,34 @@ def ask_groq(
 
     try:
         import httpx
-        resp = httpx.post(
-            GROQ_API_URL,
-            headers={
-                "Authorization": f"Bearer {GROQ_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": GROQ_MODEL,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_msg},
-                ],
-                "max_tokens": 900,
-                "temperature": 0.7,
-            },
-            timeout=30,
-        )
-        data = resp.json()
+
+        def _call(model: str) -> dict:
+            return httpx.post(
+                GROQ_API_URL,
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_msg},
+                    ],
+                    "max_tokens": 900,
+                    "temperature": 0.7,
+                },
+                timeout=30,
+            ).json()
+
+        data = _call(GROQ_MODEL)
+        if "choices" not in data:
+            # Fallback to smaller model
+            data = _call(GROQ_MODEL_FALLBACK)
         if "choices" in data:
             return data["choices"][0]["message"]["content"].strip()
-        # Surface the actual Groq error (e.g. invalid_api_key, rate_limit)
-        err_msg = ""
-        if "error" in data:
-            err_msg = data["error"].get("message", str(data["error"]))
-        return _fallback(question, subject, language, error=err_msg or f"HTTP {resp.status_code}")
+        err_msg = data.get("error", {}).get("message", str(data)) if "error" in data else f"No choices in response"
+        return _fallback(question, subject, language, error=err_msg)
     except Exception as exc:
         return _fallback(question, subject, language, error=str(exc))
 
