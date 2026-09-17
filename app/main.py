@@ -19,6 +19,7 @@ from app.auth import (
     init_auth_db, login as auth_login, logout as auth_logout,
     get_user_by_token, create_student_account, list_users,
 )
+from app.braille import text_to_unicode_braille, text_to_brf, vietnamese_note
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -701,6 +702,9 @@ def web_demo() -> str:
   </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link"
+  style="position:absolute;left:-9999px;top:4px;z-index:9999;background:#12355b;color:#fff;padding:8px 16px;border-radius:8px;font-weight:700;text-decoration:none;"
+  onfocus="this.style.left='12px'" onblur="this.style.left='-9999px'">Bỏ qua điều hướng — Skip to content</a>
 <div id="loading-bar"></div>
 
 <header>
@@ -720,7 +724,7 @@ def web_demo() -> str:
   </div>
 </header>
 
-<main>
+<main id="main-content">
   <div class="status" id="status">
     <div class="stat"><strong>Backend</strong><span>Đang kiểm tra...</span></div>
     <div class="stat"><strong>OCR</strong><span>...</span></div>
@@ -751,9 +755,11 @@ def web_demo() -> str:
         <textarea id="question">Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.</textarea>
         <div class="actions">
           <button class="btn" onclick="askTutor()" id="btn-ask" aria-label="Gửi câu hỏi tới AI">🎓 Hỏi AI</button>
+          <button class="btn" id="btn-mic" onclick="toggleMic()" aria-label="Nhập bằng giọng nói" style="background:#1565C0;" title="Nhập câu hỏi bằng giọng nói">🎙 Giọng nói</button>
           <button class="btn blue" onclick="loadDemo('geometry')" id="btn-demo-geo">📐 Demo Hình học</button>
           <button class="btn blue" onclick="loadDemo('english')" id="btn-demo-eng">🗣 Demo Tiếng Anh</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak">🔊 Đọc to kết quả</button>
+          <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép Braille">⠿ Braille</button>
         </div>
         <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span><button class="btn-stop-inline" onclick="stopSpeech(true)">⏹ Dừng</button></div>
       </div>
@@ -1082,7 +1088,9 @@ async function askTutor() {
         language: LANG
       })
     });
-    setResult(await readResponse(res));
+    const text = await readResponse(res);
+    setResult(text);
+    fetchAndShowBraille(text);
   } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
@@ -1167,6 +1175,79 @@ window.speechSynthesis && window.speechSynthesis.addEventListener('voiceschanged
 // Apply saved language on load
 setLang(LANG);
 refreshStatus();
+
+// ── VOICE INPUT (mic) ──────────────────────────────────────────────────────
+let _mediaRec = null, _micChunks = [];
+
+async function toggleMic() {
+  const btn = document.getElementById('btn-mic');
+  if (_mediaRec && _mediaRec.state === 'recording') {
+    _mediaRec.stop();
+    btn.textContent = '🎙 Giọng nói';
+    btn.style.background = '#1565C0';
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _mediaRec = new MediaRecorder(stream);
+    _micChunks = [];
+    _mediaRec.ondataavailable = e => _micChunks.push(e.data);
+    _mediaRec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(_micChunks, { type: 'audio/webm' });
+      const fd = new FormData();
+      fd.append('file', blob, 'speech.webm');
+      fd.append('language', LANG);
+      btn.textContent = '⌛ Đang nhận dạng...';
+      try {
+        const r = await fetch('/stt', { method: 'POST', body: fd });
+        const j = await r.json();
+        if (j.text) {
+          document.getElementById('question').value = j.text;
+          document.getElementById('question').focus();
+          btn.textContent = '✅ Xong';
+          setTimeout(() => { btn.textContent = '🎙 Giọng nói'; }, 2000);
+        } else {
+          btn.textContent = '⚠️ Không nhận ra';
+          setTimeout(() => { btn.textContent = '🎙 Giọng nói'; }, 2000);
+        }
+      } catch(e) {
+        btn.textContent = '❌ Lỗi STT';
+        setTimeout(() => { btn.textContent = '🎙 Giọng nói'; }, 2000);
+      }
+    };
+    _mediaRec.start();
+    btn.textContent = '⏹ Dừng ghi';
+    btn.style.background = '#dc2626';
+  } catch(e) {
+    alert('Không thể mở micro: ' + e.message);
+  }
+}
+
+// ── BRAILLE COPY ───────────────────────────────────────────────────────────
+let _lastBraille = '';
+
+async function fetchAndShowBraille(text) {
+  try {
+    const r = await fetch('/braille', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text, format: 'unicode' })
+    });
+    const j = await r.json();
+    _lastBraille = j.result || '';
+    document.getElementById('btn-braille').style.display = '';
+  } catch(e) {}
+}
+
+function copyBraille() {
+  if (!_lastBraille) return;
+  navigator.clipboard.writeText(_lastBraille).then(() => {
+    const b = document.getElementById('btn-braille');
+    b.textContent = '✅ Đã sao chép!';
+    setTimeout(() => { b.textContent = '⠿ Braille'; }, 2000);
+  });
+}
 </script>
 </body>
 </html>"""
@@ -1192,6 +1273,126 @@ def vision_status() -> Dict[str, Any]:
 @app.get("/demo-prompts")
 def get_demo_prompts() -> List[Dict[str, str]]:
     return demo_prompts()
+
+
+## ── BRAILLE ──────────────────────────────────────────────────────────────────
+
+class BrailleRequest(BaseModel):
+    text: str
+    format: Literal["unicode", "brf"] = "unicode"  # type: ignore[valid-type]
+
+@app.post("/braille")
+def convert_braille(payload: BrailleRequest) -> Dict[str, Any]:
+    """Chuyển văn bản sang Unicode Braille hoặc BRF (Braille Ready Format)."""
+    text = payload.text[:5000]
+    if payload.format == "brf":
+        converted = text_to_brf(text)
+        return {
+            "format": "brf",
+            "result": converted,
+            "char_count": len(converted),
+            "note": vietnamese_note(),
+        }
+    converted = text_to_unicode_braille(text)
+    return {
+        "format": "unicode",
+        "result": converted,
+        "char_count": len(converted),
+        "note": vietnamese_note(),
+    }
+
+@app.get("/braille/download")
+def braille_download(text: str, fmt: str = "brf"):
+    """Tải file BRF cho thiết bị đọc Braille."""
+    content = text_to_brf(text[:5000])
+    from fastapi.responses import Response
+    return Response(
+        content=content.encode("ascii", errors="replace"),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": 'attachment; filename="eduvision.brf"'},
+    )
+
+
+## ── SPEECH-TO-TEXT ───────────────────────────────────────────────────────────
+
+@app.post("/stt")
+async def speech_to_text(file: UploadFile = File(...), language: str = Form(default="vi")) -> Dict[str, Any]:
+    """Chuyển giọng nói → văn bản dùng Groq Whisper (miễn phí)."""
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY chưa được cấu hình")
+
+    audio_bytes = await file.read()
+    lang_code = "vi" if language in ("vi", "vietnamese") else "en"
+
+    import httpx
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.groq.com/openai/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {groq_key}"},
+            files={"file": (file.filename or "audio.webm", audio_bytes, file.content_type or "audio/webm")},
+            data={"model": "whisper-large-v3", "language": lang_code, "response_format": "json"},
+        )
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Groq STT lỗi: {resp.text[:200]}")
+
+    result = resp.json()
+    return {"text": result.get("text", ""), "language": lang_code}
+
+
+## ── PRIVACY ──────────────────────────────────────────────────────────────────
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_page() -> HTMLResponse:
+    return HTMLResponse("""<!DOCTYPE html><html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EduVision AI — Chính sách quyền riêng tư</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:0 auto;padding:24px 16px;color:#111827;line-height:1.7;}
+h1{color:#12355b;}h2{color:#1565C0;margin-top:2em;}a{color:#1565C0;}</style>
+</head><body>
+<h1>Chính sách quyền riêng tư — EduVision AI</h1>
+<p><em>Cập nhật: tháng 9/2026</em></p>
+
+<h2>1. Thông tin chúng tôi thu thập</h2>
+<p>EduVision AI thu thập các thông tin sau phục vụ mục đích học tập:</p>
+<ul>
+  <li><strong>Hồ sơ học sinh</strong>: tên, lớp, trình độ thị lực, điểm yếu/mạnh trong học tập (do giáo viên nhập)</li>
+  <li><strong>Lịch sử học tập</strong>: câu hỏi và câu trả lời trong các buổi học</li>
+  <li><strong>Tệp ảnh/PDF</strong>: ảnh đề bài được tải lên để nhận dạng chữ (OCR), xóa sau khi xử lý</li>
+  <li><strong>Giọng nói</strong>: nếu dùng tính năng nhập giọng nói, âm thanh được gửi đến Groq AI để chuyển thành chữ rồi xóa ngay</li>
+</ul>
+
+<h2>2. Chúng tôi KHÔNG thu thập</h2>
+<ul>
+  <li>Số điện thoại, địa chỉ, thông tin tài chính</li>
+  <li>Dữ liệu sinh trắc học</li>
+  <li>Vị trí địa lý</li>
+  <li>Thông tin không liên quan đến hoạt động học tập</li>
+</ul>
+
+<h2>3. Dữ liệu được lưu ở đâu</h2>
+<p>Toàn bộ dữ liệu học sinh được lưu trên máy chủ của nhà trường (SQLite). Dữ liệu
+<strong>không được chia sẻ</strong> với bên thứ ba ngoài các dịch vụ AI cần thiết (Groq AI để sinh câu trả lời,
+OCR.space để nhận dạng chữ — cả hai đều chỉ nhận nội dung bài học, không nhận thông tin cá nhân).</p>
+
+<h2>4. Quyền của phụ huynh và học sinh</h2>
+<ul>
+  <li>Yêu cầu xem toàn bộ dữ liệu đã lưu của học sinh</li>
+  <li>Yêu cầu xóa tài khoản và dữ liệu học tập bất kỳ lúc nào</li>
+  <li>Từ chối tính năng ghi âm giọng nói (ứng dụng vẫn hoạt động bình thường)</li>
+</ul>
+
+<h2>5. Bảo mật</h2>
+<p>Mật khẩu được mã hóa bằng bcrypt. Session đăng nhập hết hạn sau 7 ngày.
+Không có endpoint nào cho phép truy cập dữ liệu học sinh mà không cần xác thực.</p>
+
+<h2>6. Liên hệ</h2>
+<p>Mọi câu hỏi về quyền riêng tư, liên hệ giáo viên phụ trách hoặc email:
+<a href="mailto:dobaonam@example.com">dobaonam@example.com</a></p>
+
+<p style="margin-top:40px;"><a href="/">← Về trang học tập</a></p>
+</body></html>""")
 
 
 @app.post("/ask", response_model=AskResponse)
