@@ -91,7 +91,8 @@ def ask_groq(
         + f"Câu hỏi: {question}"
     )
 
-    system_prompt = _build_system_prompt(profile)
+    lang_prefix = "BẮT BUỘC: Trả lời HOÀN TOÀN bằng tiếng Việt.\n\n" if language == "vi" else ""
+    system_prompt = lang_prefix + _build_system_prompt(profile)
 
     try:
         import httpx
