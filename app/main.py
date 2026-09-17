@@ -665,9 +665,9 @@ def web_demo() -> str:
   <link rel="manifest" href="/manifest.json"/>
   <title>EduVision AI</title>
   <style>
-    :root{--red:#c41230;--blue:#12355b;--ink:#172033;--muted:#667085;--line:#d9e2ef;--soft:#f6f8fb;--panel:#fff;font-family:Inter,Arial,sans-serif}
+    :root{--red:#c41230;--blue:#12355b;--ink:#172033;--muted:#4a5568;--line:#d9e2ef;--soft:#f6f8fb;--panel:#fff;font-family:Inter,Arial,sans-serif}
     *{box-sizing:border-box}
-    body{margin:0;background:var(--soft);color:var(--ink);overflow-x:hidden;font-size:17px}
+    body{margin:0;background:var(--soft);color:var(--ink);overflow-x:hidden;font-size:18px}
     /* ── BRAND BAR (auto-hide on scroll) ── */
     .brand-bar{position:fixed;top:0;left:0;right:0;height:48px;background:#fff;border-bottom:1.5px solid var(--line);z-index:100;display:flex;align-items:center;padding:0 16px;transform:translateY(0);transition:transform 0.25s ease}
     .brand-bar.hidden{transform:translateY(-100%)}
@@ -741,24 +741,26 @@ def web_demo() -> str:
     .settings-close{position:absolute;top:12px;right:14px;border:0;background:transparent;font-size:28px;cursor:pointer;color:var(--muted);line-height:1;padding:4px 8px;border-radius:6px}
     .settings-close:hover{background:var(--soft);color:var(--ink)}
     .settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);gap:12px}
-    .toggle-switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
+    .toggle-switch{position:relative;display:inline-flex;align-items:center;width:52px;height:44px;flex-shrink:0;cursor:pointer}
     .toggle-switch input{opacity:0;width:0;height:0;position:absolute}
-    .toggle-slider{position:absolute;inset:0;background:#d1d5db;border-radius:26px;cursor:pointer;transition:.25s}
+    .toggle-slider{position:absolute;left:3px;right:3px;top:50%;transform:translateY(-50%);height:26px;background:#d1d5db;border-radius:26px;cursor:pointer;transition:.25s}
     .toggle-slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.25)}
     input:checked + .toggle-slider{background:var(--blue)}
     input:checked + .toggle-slider::before{transform:translateX(20px)}
     .speed-bar{display:flex;gap:6px;flex-wrap:wrap}
-    .speed-btn{padding:6px 11px;border:1.5px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);min-height:38px;transition:background .15s,color .15s}
+    .speed-btn{padding:8px 13px;border:1.5px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;font-size:14px;font-weight:700;color:var(--blue);min-height:44px;transition:background .15s,color .15s}
     .speed-btn:hover{background:var(--soft)}
     .speed-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
     .sentence-nav{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-    .sentence-nav button{min-height:40px;padding:6px 14px;border:1.5px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:700;color:var(--blue);transition:background .15s}
+    .sentence-nav button{min-height:44px;padding:8px 16px;border:1.5px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:15px;font-weight:700;color:var(--blue);transition:background .15s}
     .sentence-nav button:hover{background:var(--soft)}
     .sentence-nav button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     /* ── TAB NAVIGATION (mobile) ── */
     .tab-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--line);z-index:200;padding-bottom:env(safe-area-inset-bottom)}
-    .tab-nav>.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;border:0;background:transparent;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px;-webkit-tap-highlight-color:transparent;transition:color 0.12s;line-height:1.2}
-    .tab-btn .t-icon{font-size:22px;line-height:1.1;display:block}
+    .tab-nav>.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;border:0;background:transparent;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px;-webkit-tap-highlight-color:transparent;transition:color 0.12s;line-height:1.2}
+    .tab-btn .t-icon{font-size:24px;line-height:1.1;display:block}
+    body.lv-mode .tab-nav>.tab-btn{font-size:14px}
+    body.lv-mode .tab-btn .t-icon{font-size:26px}
     .tab-btn.active{color:var(--red)}
     .tab-btn:focus-visible{outline:3px solid var(--red);outline-offset:-2px}
     .vision-hint{color:var(--muted);font-size:14px;margin:0 0 12px;line-height:1.4}
@@ -792,12 +794,16 @@ def web_demo() -> str:
     <h1 id="hero-title">Trợ lý học tập cho học sinh khiếm thị</h1>
     <p class="lead" id="hero-lead">Giải thích bài học bằng ngôn ngữ dễ hiểu, hỗ trợ hình học, tiếng Anh, đọc tài liệu OCR và lập kế hoạch học tập song ngữ.</p>
   </div>
-  <div class="status" id="status">
-    <div class="stat"><strong>Backend</strong><span>Đang kiểm tra...</span></div>
-    <div class="stat"><strong>OCR</strong><span>...</span></div>
-    <div class="stat"><strong id="voice-label">Giọng nói</strong><span id="voice-val">...</span></div>
-    <div class="stat"><strong>OCR.space</strong><span id="gv-val">...</span></div>
-  </div>
+  <!-- Status: ẩn mặc định, chỉ hiện khi cần debug -->
+  <details style="margin:6px 0 12px;font-size:13px;color:var(--muted)">
+    <summary style="cursor:pointer;font-weight:600;padding:6px 0;list-style:none;user-select:none" aria-label="Trạng thái hệ thống">▸ Trạng thái hệ thống</summary>
+    <div class="status" id="status" style="margin-top:8px">
+      <div class="stat"><strong>Backend</strong><span>Đang kiểm tra...</span></div>
+      <div class="stat"><strong>OCR</strong><span>...</span></div>
+      <div class="stat"><strong id="voice-label">Giọng nói</strong><span id="voice-val">...</span></div>
+      <div class="stat"><strong>OCR.space</strong><span id="gv-val">...</span></div>
+    </div>
+  </details>
 
   <div class="grid">
     <div>
@@ -821,13 +827,18 @@ def web_demo() -> str:
         </div>
         <label for="question" id="lbl-question">Câu hỏi</label>
         <textarea id="question">Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.</textarea>
-        <div class="actions">
+        <!-- Nút chính: hành động trực tiếp -->
+        <div class="actions" style="margin-bottom:6px">
           <button class="btn" onclick="askTutor()" id="btn-ask" aria-label="Gửi câu hỏi tới AI">🎓 Hỏi AI</button>
           <button class="btn" id="btn-mic" onclick="toggleMic()" aria-label="Nhập bằng giọng nói" style="background:#1565C0;" title="Nhập câu hỏi bằng giọng nói">🎙 Giọng nói</button>
-          <button class="btn blue" onclick="loadDemo('geometry')" id="btn-demo-geo">📐 Demo Hình học</button>
-          <button class="btn blue" onclick="loadDemo('english')" id="btn-demo-eng">🗣 Demo Tiếng Anh</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak">🔊 Đọc to kết quả</button>
           <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép Braille">⠿ Braille</button>
+        </div>
+        <!-- Demo: hàng riêng, nhỏ hơn — dùng thử, không phải hành động chính -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          <span style="font-size:13px;color:var(--muted);align-self:center;margin-right:2px">Dùng thử:</span>
+          <button class="btn blue" onclick="loadDemo('geometry')" id="btn-demo-geo" style="font-size:14px;padding:8px 14px;min-height:40px">📐 Hình học</button>
+          <button class="btn blue" onclick="loadDemo('english')" id="btn-demo-eng" style="font-size:14px;padding:8px 14px;min-height:40px">🗣 Tiếng Anh</button>
         </div>
         <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span><button class="btn-stop-inline" onclick="stopSpeech(true)">⏹ Dừng</button></div>
       </div>
@@ -880,11 +891,13 @@ def web_demo() -> str:
 
       <!-- VISION DESCRIBE -->
       <div class="card">
-        <h2 id="vision-title">👁 Mô tả hình vẽ</h2>
-        <p class="vision-hint" id="vision-hint">Tải ảnh hình vẽ toán học — AI mô tả bằng lời cho học sinh khiếm thị.</p>
-        <input id="visionFile" type="file" accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh hình vẽ"/>
+        <h2 id="vision-title">📸 Giáo viên mô tả hình vẽ</h2>
+        <p class="vision-hint" id="vision-hint">Dành cho <strong>giáo viên / phụ huynh</strong>: chụp ảnh bài toán có hình vẽ → AI đọc mô tả bằng lời cho học sinh nghe.</p>
+        <p style="font-size:14px;color:var(--muted);background:#fef9ec;border-left:3px solid #f59e0b;padding:8px 12px;border-radius:0 6px 6px 0;margin:0 0 12px">
+          💡 Học sinh: nhờ thầy/cô hoặc ba/mẹ chụp ảnh hình vẽ rồi bấm "Mô tả" — AI sẽ đọc kết quả to.</p>
+        <input id="visionFile" type="file" accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh hình vẽ cần mô tả"/>
         <div class="actions">
-          <button class="btn" onclick="describeImage()" id="btn-vision">👁 Mô tả hình</button>
+          <button class="btn" onclick="describeImage()" id="btn-vision">📸 Mô tả hình</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak-vision">🔊 Đọc kết quả</button>
         </div>
       </div>
@@ -1206,6 +1219,8 @@ async function askTutor() {
     const text = await readResponse(res);
     setResult(text);
     fetchAndShowBraille(text);
+    // Auto-TTS: đọc ngay khi AI trả lời xong — người mù không cần bấm thêm bước
+    setTimeout(function() { speakResult(); }, 400);
   } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
@@ -1543,13 +1558,16 @@ async function doLoginSheet() {
   }, {passive: true});
 })();
 
-// Check session on load
+// Check session on load — auto-fill student ID và đổi mật khẩu username
 (async function checkSession() {
   try {
     var r = await fetch('/auth/me');
     if (r.ok) {
       var j = await r.json();
       _updateAuthBar(j.username || j.display_name);
+      // Auto-fill student ID from session
+      var studentEl = document.getElementById('student');
+      if (studentEl && j.student_id) studentEl.value = j.student_id;
       var cpUser = document.getElementById('cp-username');
       if (cpUser && j.username) cpUser.value = j.username;
     }
@@ -1571,6 +1589,22 @@ function toggleSettings() {
     if (lvCk) lvCk.checked = _lvMode;
     if (darkCk) darkCk.checked = _darkMode;
     _syncSpeedBtns();
+    // Focus trap: move focus inside panel, trap Tab/Shift+Tab
+    setTimeout(function() {
+      var closeBtn = p.querySelector('.settings-close');
+      if (closeBtn) closeBtn.focus();
+    }, 80);
+    p._trapHandler = function(e) {
+      if (e.key !== 'Tab' && e.key !== 'Escape') return;
+      if (e.key === 'Escape') { toggleSettings(); return; }
+      var focusable = Array.from(p.querySelectorAll('button,input,[tabindex]:not([tabindex="-1"])'));
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+      else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
+    };
+    document.addEventListener('keydown', p._trapHandler);
+  } else {
+    if (p._trapHandler) { document.removeEventListener('keydown', p._trapHandler); p._trapHandler = null; }
   }
 }
 
