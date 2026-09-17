@@ -840,7 +840,7 @@ def web_demo() -> str:
 
 <!-- Brand bar: thin, auto-hides on scroll down -->
 <div class="brand-bar" id="brand-bar" role="banner">
-  <img src="/logo.jpg" alt="EduVision AI" class="brand-logo" style="height:36px;width:auto;object-fit:contain;display:block">
+  <span class="brand">EduVision AI</span>
   <button onclick="toggleSettings()" aria-label="Cài đặt trợ năng"
     style="margin-left:auto;background:transparent;border:0;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1;color:var(--ink)">⚙</button>
 </div>
@@ -2970,7 +2970,7 @@ def _admin_topbar(role: str, school_name: str = "") -> str:
     return f"""<a href="#main" class="skip-nav">Chuyển đến nội dung chính</a>
 <div class="topbar" role="banner">
   <a href="{home}" class="topbar-brand" style="text-decoration:none">
-    <img src="/logo.jpg" alt="EduVision AI" style="height:32px;width:auto;object-fit:contain;border-radius:6px">
+    <span class="ev">EduVision</span> AI
     <span class="topbar-sub">{sub}</span>
   </a>
   <nav class="topbar-nav" aria-label="Menu quản trị">
