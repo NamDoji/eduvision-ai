@@ -1554,9 +1554,8 @@ var _sentences = [];
 var _sentIdx = 0;
 
 function splitSentences(text) {
-  // Dùng replace thay vì lookbehind để tương thích Safari iOS cũ
-  var normalized = text.replace(/([.!?。…])\s+/g, '$1\n').replace(/\n{2,}/g, '\n');
-  var parts = normalized.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 5; });
+  // Tach cau: tuong thich moi browser, tranh lookbehind va escape phuc tap
+  var parts = text.replace(/([.!?]+)\s+/g, '$1|').split('|').map(function(s){return s.trim();}).filter(function(s){return s.length>5;});
   return parts.length ? parts : [text];
 }
 
