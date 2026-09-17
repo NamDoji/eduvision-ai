@@ -812,10 +812,7 @@ def web_demo() -> str:
               <option value="general" id="opt-gen">Tổng hợp</option>
             </select>
           </div>
-          <div>
-            <label for="student" id="lbl-student">Mã học sinh</label>
-            <input id="student" value="S001"/>
-          </div>
+          <input id="student" type="hidden" value="S001"/>
         </div>
         <label for="question" id="lbl-question">Câu hỏi</label>
         <textarea id="question">Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.</textarea>
