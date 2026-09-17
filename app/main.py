@@ -735,6 +735,63 @@ def web_demo() -> str:
     body.lv-dark .sentence-nav button{background:#222;color:#93c5fd;border-color:#555}
     .lv-highlight{background:#ffff00;color:#000;border-radius:2px;padding:0 1px}
     body.lv-dark .lv-highlight{background:#00ffff;color:#000}
+    /* ── HIGH CONTRAST MODE (WCAG AAA) ── */
+    body.lv-hc{background:#000 !important;color:#fff !important}
+    body.lv-hc .card{background:#111 !important;border-color:#fff !important}
+    body.lv-hc .brand-bar{background:#000 !important;border-color:#ff0 !important}
+    body.lv-hc .brand{color:#ff0 !important}
+    body.lv-hc .btn{border:2px solid #fff !important}
+    body.lv-hc .btn.ghost{background:#222 !important;color:#ff0 !important;border-color:#ff0 !important}
+    body.lv-hc textarea,body.lv-hc input,body.lv-hc select{background:#000 !important;color:#fff !important;border-color:#ff0 !important}
+    body.lv-hc pre,body.lv-hc .result-chunk{background:#000 !important;color:#fff !important;border:2px solid #ff0 !important}
+    body.lv-hc .tab-nav{background:#000 !important;border-color:#fff !important}
+    body.lv-hc .tab-btn.active{color:#ff0 !important}
+    body.lv-hc .settings-panel{background:#111 !important;color:#fff !important}
+    body.lv-hc .subject-grid .subj-btn{background:#000 !important;border-color:#fff !important;color:#fff !important}
+    body.lv-hc .subject-grid .subj-btn.active{background:#ff0 !important;color:#000 !important;border-color:#ff0 !important}
+    body.lv-hc .suggestion-chip{background:#111 !important;border-color:#ff0 !important;color:#ff0 !important}
+    body.lv-hc .hist-item{background:#111 !important;border-color:#555 !important;color:#ccc !important}
+    /* ── SUBJECT GRID ── */
+    .subject-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+    .subj-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 6px;border:2px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);min-height:64px;transition:all .15s;line-height:1.2;text-align:center;-webkit-tap-highlight-color:transparent}
+    .subj-btn:hover{background:var(--soft);border-color:var(--blue)}
+    .subj-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 8px rgba(18,53,91,.3)}
+    .subj-btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+    .subj-icon{font-size:22px;line-height:1}
+    body.lv-mode .subj-btn{font-size:15px;min-height:72px;gap:6px}
+    body.lv-mode .subj-icon{font-size:26px}
+    @media(max-width:560px){.subject-grid{grid-template-columns:repeat(3,1fr);gap:6px}.subj-btn{padding:10px 4px;min-height:60px;font-size:12px}}
+    /* ── SUGGESTIONS ── */
+    .suggestions-wrap{margin:8px 0 4px}
+    .suggestions-label{font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
+    .suggestions-row{display:flex;flex-wrap:wrap;gap:6px}
+    .suggestion-chip{padding:7px 12px;border:1.5px solid var(--line);border-radius:20px;background:#fff;font-size:13px;color:var(--blue);cursor:pointer;transition:all .15s;min-height:36px;line-height:1.3;text-align:left}
+    .suggestion-chip:hover{background:var(--soft);border-color:var(--blue)}
+    .suggestion-chip:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+    /* ── HISTORY ── */
+    .hist-wrap{margin:4px 0 10px}
+    .hist-toggle{background:transparent;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:4px;min-height:32px}
+    .hist-toggle:hover{color:var(--blue)}
+    .hist-list{display:none;margin-top:6px;display:none}
+    .hist-list.open{display:flex;flex-direction:column;gap:6px}
+    .hist-item{padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;color:var(--ink);cursor:pointer;line-height:1.4;min-height:36px;display:flex;align-items:center;gap:6px}
+    .hist-item:hover{background:var(--soft);border-color:var(--blue)}
+    /* ── CHUNKED RESULT ── */
+    .result-chunks{min-height:300px;display:flex;flex-direction:column;gap:12px;padding:4px 0}
+    .result-chunk{background:#111827;color:#e8eef8;border-radius:10px;padding:16px;line-height:1.6;word-break:break-word;font-size:14px}
+    .result-chunk.empty-state{color:#8aabb8;text-align:center;padding:40px 16px;min-height:260px;display:flex;align-items:center;justify-content:center;font-size:15px}
+    .chunk-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+    .chunk-label{font-size:12px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.05em}
+    .chunk-speak{background:transparent;border:1px solid #374151;border-radius:6px;color:#93c5fd;font-size:13px;padding:4px 10px;cursor:pointer;min-height:30px;transition:background .15s}
+    .chunk-speak:hover{background:#1f2937}
+    .chunk-body{white-space:pre-wrap}
+    body.lv-mode .result-chunk{font-size:1.1em;line-height:1.8}
+    @media(max-width:900px){.result-chunks{min-height:200px}}
+    /* ── LOADING SPINNER ── */
+    .loading-overlay{display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(18,53,91,.92);color:#fff;padding:12px 20px;border-radius:12px;font-size:15px;font-weight:700;z-index:5000;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+    .loading-overlay.show{display:flex}
+    .spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
     /* ── SETTINGS PANEL ── */
     .settings-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:min(340px,92vw);background:#fff;border-left:2px solid var(--line);z-index:400;padding:24px 20px;overflow-y:auto;box-shadow:-6px 0 24px rgba(0,0,0,.15)}
     .settings-panel.open{display:block}
@@ -805,25 +862,61 @@ def web_demo() -> str:
         <h2 id="tutor-title">🤖 AI Gia sư</h2>
         <div class="row2">
           <div>
-            <label for="subject" id="lbl-subject">Môn học</label>
-            <select id="subject">
+            <label id="lbl-subject" style="margin-bottom:8px">Môn học</label>
+            <select id="subject" style="display:none" aria-hidden="true">
               <option value="geometry" id="opt-geo">Hình học</option>
               <option value="english" id="opt-eng">Tiếng Anh</option>
               <option value="general" id="opt-gen">Tổng hợp</option>
+              <option value="math">Toán học</option>
+              <option value="science">Khoa học</option>
+              <option value="history">Lịch sử</option>
             </select>
+            <div class="subject-grid" role="group" aria-label="Chọn môn học">
+              <button class="subj-btn active" data-subject="geometry" onclick="selectSubject('geometry',this)" aria-pressed="true">
+                <span class="subj-icon">📐</span><span id="opt-geo">Hình học</span>
+              </button>
+              <button class="subj-btn" data-subject="english" onclick="selectSubject('english',this)" aria-pressed="false">
+                <span class="subj-icon">🗣</span><span id="opt-eng">Tiếng Anh</span>
+              </button>
+              <button class="subj-btn" data-subject="math" onclick="selectSubject('math',this)" aria-pressed="false">
+                <span class="subj-icon">🔢</span><span id="opt-math">Toán học</span>
+              </button>
+              <button class="subj-btn" data-subject="science" onclick="selectSubject('science',this)" aria-pressed="false">
+                <span class="subj-icon">🔬</span><span id="opt-sci">Khoa học</span>
+              </button>
+              <button class="subj-btn" data-subject="history" onclick="selectSubject('history',this)" aria-pressed="false">
+                <span class="subj-icon">📖</span><span id="opt-hist">Lịch sử</span>
+              </button>
+              <button class="subj-btn" data-subject="general" onclick="selectSubject('general',this)" aria-pressed="false">
+                <span class="subj-icon">🌐</span><span id="opt-gen">Tổng hợp</span>
+              </button>
+            </div>
+            <!-- Câu gợi ý theo môn -->
+            <div class="suggestions-wrap" id="suggestions-wrap">
+              <div class="suggestions-label">Câu hỏi gợi ý:</div>
+              <div class="suggestions-row" id="suggestions-row"></div>
+            </div>
           </div>
           <input id="student" type="hidden" value="S001"/>
         </div>
         <label for="question" id="lbl-question">Câu hỏi</label>
-        <textarea id="question">Tam giác cân là gì? Giải thích cho học sinh lớp 8 bị khiếm thị.</textarea>
-        <!-- Nút chính: hành động trực tiếp -->
+        <textarea id="question" placeholder="Nhập câu hỏi của bạn..."></textarea>
+        <!-- Lịch sử câu hỏi gần đây -->
+        <div class="hist-wrap" id="hist-wrap" style="display:none">
+          <button class="hist-toggle" onclick="toggleHistory()" aria-expanded="false" id="hist-toggle-btn">
+            🕐 Câu hỏi gần đây ▾
+          </button>
+          <div class="hist-list" id="hist-list"></div>
+        </div>
+        <!-- Nút chính -->
         <div class="actions" style="margin-bottom:6px">
           <button class="btn" onclick="askTutor()" id="btn-ask" aria-label="Gửi câu hỏi tới AI">🎓 Hỏi AI</button>
           <button class="btn" id="btn-mic" onclick="toggleMic()" aria-label="Nhập bằng giọng nói" style="background:#1565C0;" title="Nhập câu hỏi bằng giọng nói">🎙 Giọng nói</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak">🔊 Đọc to kết quả</button>
-          <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép chữ Braille vào clipboard" title="Chữ nổi Braille — dán vào phần mềm đọc chữ nổi hoặc thiết bị Braille display">⠿ Chữ nổi Braille</button>
+          <button class="btn ghost" id="btn-repeat" onclick="repeatLast()" style="display:none" aria-label="Hỏi lại câu trước">↩ Hỏi lại</button>
+          <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép chữ Braille vào clipboard">⠿ Braille</button>
         </div>
-        <!-- Demo: hàng riêng, nhỏ hơn — dùng thử, không phải hành động chính -->
+        <!-- Demo: hàng riêng -->
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
           <span style="font-size:13px;color:var(--muted);align-self:center;margin-right:2px">Dùng thử:</span>
           <button class="btn blue" onclick="loadDemo('geometry')" id="btn-demo-geo" style="font-size:14px;padding:8px 14px;min-height:40px">📐 Hình học</button>
@@ -897,8 +990,10 @@ def web_demo() -> str:
         <h2 id="result-title">📋 Kết quả</h2>
         <div id="sr-status" aria-live="assertive" aria-atomic="true"
           style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
-        <pre id="result" role="log" aria-live="polite" aria-atomic="false"
-          aria-label="Kết quả từ AI — dùng phím mũi tên để đọc">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.</pre>
+        <div id="result" role="log" aria-live="polite" aria-atomic="false"
+          aria-label="Kết quả từ AI" class="result-chunks">
+          <div class="result-chunk empty-state">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.</div>
+        </div>
         <div class="sentence-nav" id="sentence-nav" style="display:none" role="navigation" aria-label="Điều hướng câu">
           <button onclick="prevSentence()" aria-label="Câu trước">⬅ Trước</button>
           <button onclick="repeatSentence()" aria-label="Lặp lại câu này">🔄 Lặp</button>
@@ -1092,15 +1187,27 @@ function speakText(text, lang) {
 }
 
 // ── LOADING HELPERS ─────────────────────────────────────────────────────────
-function showLoading() {
-  document.getElementById('loading-bar').style.display='block';
+function showLoading(msg) {
+  document.getElementById('loading-bar').style.display = 'block';
+  var ov = document.getElementById('loading-overlay');
+  var lm = document.getElementById('loading-msg');
+  if (ov) ov.classList.add('show');
+  if (lm) lm.textContent = msg || (LANG === 'vi' ? 'Đang xử lý...' : 'Processing...');
   announce(LANG === 'vi' ? 'Đang xử lý, vui lòng chờ...' : 'Processing, please wait...');
 }
-function hideLoading() { document.getElementById('loading-bar').style.display='none'; }
+function hideLoading() {
+  document.getElementById('loading-bar').style.display = 'none';
+  var ov = document.getElementById('loading-overlay');
+  if (ov) ov.classList.remove('show');
+  playBeep(660, 0.15, 0.12);
+}
 
 function displayError(message) {
   const fallback = LANG === 'vi' ? 'Không thể xử lý yêu cầu lúc này.' : 'The request could not be processed right now.';
-  document.getElementById('result').textContent = (LANG === 'vi' ? 'Lỗi: ' : 'Error: ') + (message || fallback);
+  var el = document.getElementById('result');
+  if (el) el.innerHTML = '<div class="result-chunk" style="border:2px solid #dc2626"><div class="chunk-body" style="color:#fca5a5">' +
+    esc((LANG === 'vi' ? 'Lỗi: ' : 'Error: ') + (message || fallback)) + '</div></div>';
+  playBeep(220, 0.3, 0.15);
 }
 
 function formatList(items) {
@@ -1161,7 +1268,7 @@ function announce(msg) {
 
 function setResult(data) {
   let text = formatResult(data);
-  document.getElementById('result').textContent = text;
+  renderChunks(text);
   // Thông báo ngắn cho screen reader biết có kết quả mới
   announce(LANG === 'vi' ? 'Đã nhận kết quả từ AI. Đọc vùng kết quả để xem nội dung.' : 'AI response received. Read the result area.');
   // Auto-speak: answer > OCR description+text > plain string
@@ -1188,17 +1295,22 @@ function loadDemo(kind) {
   const T = UI[LANG];
   document.getElementById('subject').value = kind;
   document.getElementById('question').value = kind === 'geometry' ? T.demoGeo : T.demoEng;
+  // sync subject grid visual state
+  var btn = document.querySelector('.subj-btn[data-subject="' + kind + '"]');
+  if (btn) selectSubject(kind, btn);
 }
 
 // ── API CALLS ────────────────────────────────────────────────────────────────
 async function askTutor() {
-  showLoading();
+  var q = document.getElementById('question').value.trim();
+  if (q) saveToHistory(q);
+  showLoading(LANG === 'vi' ? '🤖 AI đang suy nghĩ...' : '🤖 AI is thinking...');
   try {
     const res = await fetch('/ask', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         student_id: document.getElementById('student').value,
-        subject: document.getElementById('subject').value,
+        subject: _currentSubject || document.getElementById('subject').value,
         question: document.getElementById('question').value,
         language: LANG
       })
@@ -1284,6 +1396,172 @@ async function refreshStatus() {
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
+// ── SUBJECT GRID ─────────────────────────────────────────────────────────────
+var _currentSubject = 'geometry';
+const SUBJECT_SUGGESTIONS = {
+  geometry: ['Tam giác đều là gì?', 'Diện tích hình thang tính như thế nào?', 'Hình tròn và chu vi tính ra sao?'],
+  english:  ['How do I use present perfect tense?', 'Explain "however" vs "although"', 'What is passive voice?'],
+  math:     ['Phân số thập phân là gì?', 'Cách tính căn bậc hai?', 'Ước chung lớn nhất là gì?'],
+  science:  ['Quang hợp diễn ra ở đâu?', 'Tại sao bầu trời màu xanh?', 'Nguyên tử là gì?'],
+  history:  ['Chiến tranh thế giới thứ 2 xảy ra khi nào?', 'Triều Nguyễn kéo dài bao lâu?', 'Cách mạng tháng Tám là gì?'],
+  general:  ['Giải thích khái niệm bình đẳng giới?', 'Tại sao học toán quan trọng?', 'Blockchain là gì?'],
+};
+function selectSubject(subj, btn) {
+  _currentSubject = subj;
+  document.getElementById('subject').value = subj;
+  document.querySelectorAll('.subj-btn').forEach(b => {
+    b.classList.toggle('active', b === btn);
+    b.setAttribute('aria-pressed', String(b === btn));
+  });
+  updateSuggestions(subj);
+}
+function updateSuggestions(subj) {
+  var row = document.getElementById('suggestions-row');
+  if (!row) return;
+  var chips = (SUBJECT_SUGGESTIONS[subj] || []).map(function(q) {
+    return '<button class="suggestion-chip" onclick="useSuggestion(this)">' + q + '</button>';
+  }).join('');
+  row.innerHTML = chips;
+}
+function useSuggestion(el) {
+  document.getElementById('question').value = el.textContent;
+  document.getElementById('question').focus();
+}
+// Khởi tạo gợi ý ban đầu
+updateSuggestions('geometry');
+
+// ── HISTORY ──────────────────────────────────────────────────────────────────
+var _lastQuestion = '';
+function saveToHistory(q) {
+  if (!q) return;
+  _lastQuestion = q;
+  var hist = JSON.parse(localStorage.getItem('ev_hist') || '[]');
+  hist = hist.filter(function(x) { return x !== q; });
+  hist.unshift(q);
+  if (hist.length > 5) hist = hist.slice(0, 5);
+  localStorage.setItem('ev_hist', JSON.stringify(hist));
+  renderHistory();
+}
+function renderHistory() {
+  var hist = JSON.parse(localStorage.getItem('ev_hist') || '[]');
+  var wrap = document.getElementById('hist-wrap');
+  var list = document.getElementById('hist-list');
+  if (!wrap || !list) return;
+  if (!hist.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = hist.map(function(q, i) {
+    return '<button class="hist-item" onclick="useHistory(this)" aria-label="Dùng lại câu hỏi: ' + q.replace(/"/g,'') + '">' +
+      '<span style="color:var(--muted);font-size:11px;flex-shrink:0">' + (i+1) + '</span> ' + q +
+      '</button>';
+  }).join('');
+  var btn = document.getElementById('btn-repeat');
+  if (btn) btn.style.display = '';
+}
+function useHistory(el) {
+  document.getElementById('question').value = el.textContent.replace(/^\d\s/, '').trim();
+  toggleHistory(false);
+}
+function toggleHistory(force) {
+  var list = document.getElementById('hist-list');
+  var btn = document.getElementById('hist-toggle-btn');
+  if (!list) return;
+  var open = typeof force === 'boolean' ? force : !list.classList.contains('open');
+  list.classList.toggle('open', open);
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+function repeatLast() {
+  if (!_lastQuestion) return;
+  document.getElementById('question').value = _lastQuestion;
+  askTutor();
+}
+renderHistory();
+
+// ── HIGH CONTRAST MODE ───────────────────────────────────────────────────────
+var _hcMode = localStorage.getItem('ev_hc') === '1';
+function toggleHC(on) {
+  _hcMode = on;
+  document.body.classList.toggle('lv-hc', on);
+  localStorage.setItem('ev_hc', on ? '1' : '0');
+}
+if (_hcMode) {
+  document.body.classList.add('lv-hc');
+  var hcEl = document.getElementById('hc-toggle-check');
+  if (hcEl) hcEl.checked = true;
+}
+
+// ── LOADING WITH AUDIO FEEDBACK ───────────────────────────────────────────────
+var _audioCtx = null;
+function playBeep(freq, dur, vol) {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = _audioCtx.createOscillator();
+    var gain = _audioCtx.createGain();
+    osc.connect(gain); gain.connect(_audioCtx.destination);
+    osc.frequency.value = freq || 880;
+    gain.gain.setValueAtTime(vol || 0.15, _audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + (dur || 0.2));
+    osc.start(); osc.stop(_audioCtx.currentTime + (dur || 0.2));
+  } catch(e) {}
+}
+
+// ── CHUNKED RESULT DISPLAY ────────────────────────────────────────────────────
+var CHUNK_LABELS_VI = {
+  'định nghĩa': '📖 Định nghĩa', 'khái niệm': '📖 Khái niệm',
+  'giải thích': '💡 Giải thích', 'phân tích': '💡 Phân tích',
+  'ví dụ': '✏️ Ví dụ', 'bài tập': '✏️ Bài tập ví dụ',
+  'ghi nhớ': '⭐ Ghi nhớ', 'lưu ý': '⭐ Lưu ý', 'kết luận': '✅ Kết luận',
+  'tóm tắt': '✅ Tóm tắt',
+};
+function parseChunks(text) {
+  var lines = text.split('\\n');
+  var chunks = [], cur = null;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    var heading = null;
+    // Match **Label:** or ## Label or Label: at start
+    var m = line.match(/^(?:\\*\\*|##\\s*)([^*:\\n]{2,40})(?:\\*\\*|:)/);
+    if (m) {
+      var lc = m[1].toLowerCase().trim();
+      for (var k in CHUNK_LABELS_VI) {
+        if (lc.includes(k)) { heading = CHUNK_LABELS_VI[k] || m[1]; break; }
+      }
+      if (!heading) heading = '📌 ' + m[1].trim();
+    }
+    if (heading) {
+      if (cur && cur.body.trim()) chunks.push(cur);
+      cur = {label: heading, body: ''};
+    } else if (cur) {
+      cur.body += line + '\\n';
+    } else {
+      cur = {label: null, body: line + '\\n'};
+    }
+  }
+  if (cur && cur.body.trim()) chunks.push(cur);
+  return chunks;
+}
+function renderChunks(text) {
+  var el = document.getElementById('result');
+  if (!el) return;
+  var chunks = parseChunks(text);
+  if (!chunks.length) {
+    el.innerHTML = '<div class="result-chunk"><div class="chunk-body">' + esc(text) + '</div></div>';
+    return;
+  }
+  el.innerHTML = chunks.map(function(c, i) {
+    var hdr = c.label ? '<div class="chunk-header"><span class="chunk-label">' + esc(c.label) + '</span>' +
+      '<button class="chunk-speak" onclick="speakChunk(' + i + ')" aria-label="Đọc to phần này">🔊 Nghe</button></div>' : '';
+    return '<div class="result-chunk" data-chunk="' + i + '">' + hdr +
+      '<div class="chunk-body">' + esc(c.body.trim()) + '</div></div>';
+  }).join('');
+  window._resultChunks = chunks;
+}
+var _resultChunksStore = [];
+function speakChunk(idx) {
+  if (!window._resultChunks || !window._resultChunks[idx]) return;
+  speakText(window._resultChunks[idx].body, LANG);
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\\n/g,'<br>'); }
+
 // Ensure voices are loaded before first use
 window.speechSynthesis && window.speechSynthesis.getVoices();
 window.speechSynthesis && window.speechSynthesis.addEventListener('voiceschanged', () => {});
@@ -1810,9 +2088,17 @@ if ('serviceWorker' in navigator) {
   </div>
 
   <div class="settings-row">
-    <label for="dark-toggle-check" style="font-weight:600;cursor:pointer;flex:1">🌙 Nền tối (High Contrast)</label>
+    <label for="dark-toggle-check" style="font-weight:600;cursor:pointer;flex:1">🌙 Nền tối</label>
     <label class="toggle-switch">
       <input type="checkbox" id="dark-toggle-check" onchange="toggleDarkMode(this.checked)">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="settings-row">
+    <label for="hc-toggle-check" style="font-weight:600;cursor:pointer;flex:1">⚡ Tương phản cực cao (AAA)</label>
+    <label class="toggle-switch">
+      <input type="checkbox" id="hc-toggle-check" onchange="toggleHC(this.checked)">
       <span class="toggle-slider"></span>
     </label>
   </div>
@@ -1888,6 +2174,9 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<div class="loading-overlay" id="loading-overlay" aria-live="assertive" role="status">
+  <div class="spinner"></div><span id="loading-msg">Đang xử lý...</span>
+</div>
 <nav class="tab-nav" role="navigation" aria-label="Điều hướng chính">
   <button class="tab-btn active" data-tab="ask" onclick="showTab('ask')" aria-pressed="true"><span class="t-icon">🤖</span>Hỏi AI</button>
   <button class="tab-btn" data-tab="result" onclick="showTab('result')" aria-pressed="false"><span class="t-icon">📋</span>Kết quả</button>
