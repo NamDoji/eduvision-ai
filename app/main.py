@@ -2028,13 +2028,13 @@ async function changePassword() {
 })();
 
 // PWA Service Worker
+// Unregister any old service workers (they were caching stale JS)
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/service-worker.js').then(function(reg) {
-      console.log('SW registered:', reg.scope);
-    }).catch(function(err) {
-      console.warn('SW registration failed:', err);
-    });
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(reg) { reg.unregister(); });
+  });
+  caches.keys().then(function(keys) {
+    keys.forEach(function(k) { caches.delete(k); });
   });
 }
 </script>
