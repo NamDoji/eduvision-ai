@@ -6,15 +6,18 @@ from typing import Any, Dict, List, Optional
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 # Try in order until one works — Groq deprecates models periodically
+# As of 2026: old llama3/gemma/mixtral IDs decommissioned; use openai/gpt-oss-* or groq/compound
 GROQ_MODELS_TO_TRY = [
-    os.environ.get("GROQ_MODEL", ""),
-    "llama-3.3-70b-versatile",
-    "llama-3.1-70b-versatile",
-    "llama-3.1-8b-instant",
-    "gemma2-9b-it",
-    "mixtral-8x7b-32768",
+    m for m in [
+        os.environ.get("GROQ_MODEL", ""),
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "groq/compound",
+        "groq/compound-mini",
+    ] if m
 ]
-GROQ_MODELS_TO_TRY = [m for m in GROQ_MODELS_TO_TRY if m]
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 BASE_SYSTEM_PROMPT = """You are EduVision AI — a warm, patient tutor for visually impaired and low-vision students.
