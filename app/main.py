@@ -789,21 +789,13 @@ def web_demo() -> str:
 </div>
 
 <main id="main-content">
-  <!-- Hero: scrolls away naturally — no sticky -->
-  <div class="hero-wrap">
-    <h1 id="hero-title">Trợ lý học tập cho học sinh khiếm thị</h1>
-    <p class="lead" id="hero-lead">Giải thích bài học bằng ngôn ngữ dễ hiểu, hỗ trợ hình học, tiếng Anh, đọc tài liệu OCR và lập kế hoạch học tập song ngữ.</p>
+  <!-- Hidden status elements (kept for JS health-check logic) -->
+  <div id="status" style="display:none">
+    <div class="stat"><strong>Backend</strong><span>...</span></div>
+    <div class="stat"><strong>OCR</strong><span>...</span></div>
+    <div class="stat"><strong id="voice-label">Giọng nói</strong><span id="voice-val">...</span></div>
+    <div class="stat"><strong>OCR.space</strong><span id="gv-val">...</span></div>
   </div>
-  <!-- Status: ẩn mặc định, chỉ hiện khi cần debug -->
-  <details style="margin:6px 0 12px;font-size:13px;color:var(--muted)">
-    <summary style="cursor:pointer;font-weight:600;padding:6px 0;list-style:none;user-select:none" aria-label="Trạng thái hệ thống">▸ Trạng thái hệ thống</summary>
-    <div class="status" id="status" style="margin-top:8px">
-      <div class="stat"><strong>Backend</strong><span>Đang kiểm tra...</span></div>
-      <div class="stat"><strong>OCR</strong><span>...</span></div>
-      <div class="stat"><strong id="voice-label">Giọng nói</strong><span id="voice-val">...</span></div>
-      <div class="stat"><strong>OCR.space</strong><span id="gv-val">...</span></div>
-    </div>
-  </details>
 
   <div class="grid">
     <div>
