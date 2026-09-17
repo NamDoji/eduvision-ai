@@ -3481,7 +3481,7 @@ def pwa_manifest():
 def service_worker():
     from fastapi.responses import Response
     sw_code = r"""
-const CACHE_NAME = 'eduvision-v1';
+const CACHE_NAME = 'eduvision-v3';
 const CORE_ASSETS = [
   '/',
   '/privacy',
@@ -3521,6 +3521,16 @@ self.addEventListener('fetch', function(event) {
           answer: 'Bạn đang ngoại tuyến. Kết nối mạng và thử lại nhé.',
           offline: true
         }), { headers: { 'Content-Type': 'application/json' } });
+      })
+    );
+    return;
+  }
+
+  // Network-first for HTML pages (always get latest JS/CSS)
+  if (url.pathname === '/' || url.pathname === '/privacy') {
+    event.respondWith(
+      fetch(event.request).catch(function() {
+        return caches.match(event.request);
       })
     );
     return;
