@@ -651,8 +651,8 @@ def localized_plan(payload: StudyPlanRequest) -> StudyPlanResponse:
 
 
 @app.get("/", response_class=HTMLResponse)
-def web_demo() -> str:
-    return """<!doctype html>
+def web_demo() -> HTMLResponse:
+    content = """<!doctype html>
 <html lang="vi" id="html-root">
 <head>
   <meta charset="utf-8"/>
@@ -2176,6 +2176,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 </body>
 </html>"""
+    return HTMLResponse(content=content, headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"})
 
 @app.get("/logo.jpg")
 def serve_logo() -> FileResponse:
