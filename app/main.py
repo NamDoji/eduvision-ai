@@ -18,7 +18,9 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from pydantic import BaseModel, Field
 from app.auth import (
     init_auth_db, login as auth_login, logout as auth_logout,
-    get_user_by_token, create_student_account, list_users, change_password,
+    get_user_by_token, create_student_account, create_teacher_account,
+    list_users, change_password,
+    create_school, list_schools, get_school, list_school_users, reset_user_password,
 )
 from app.braille import text_to_unicode_braille, text_to_brf, vietnamese_note
 
@@ -2365,3 +2367,384 @@ def reset_demo(x_reset_token: str = Header(default="")) -> Dict[str, Any]:
     with db() as conn:
         conn.execute("DELETE FROM learning_events")
     return {"status": "ok", "message": "Demo learning history cleared."}
+
+
+## ── ADMIN SYSTEM ──────────────────────────────────────────────────────────────
+
+def _admin_css() -> str:
+    return """
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:20px;line-height:1.6;background:#1a1a2e;color:#e8e8f0;min-height:100vh}
+a{color:#7eb8f7;text-decoration:none}
+a:hover{text-decoration:underline}
+.topbar{background:#16213e;padding:16px 24px;display:flex;align-items:center;gap:16px;border-bottom:3px solid #4a90d9;flex-wrap:wrap}
+.topbar h1{font-size:22px;color:#fff;flex:1}
+.topbar .nav-links{display:flex;gap:12px;flex-wrap:wrap}
+.topbar .nav-links a{background:#2a4a7f;color:#fff;padding:8px 16px;border-radius:8px;font-size:16px;font-weight:600}
+.topbar .nav-links a:hover{background:#3a6aaf}
+main{max-width:1000px;margin:0 auto;padding:24px 20px}
+h2{font-size:26px;color:#7eb8f7;margin:24px 0 16px;padding-bottom:8px;border-bottom:2px solid #2a4a7f}
+h3{font-size:21px;color:#a8c8f8;margin:16px 0 10px}
+.card{background:#16213e;border:2px solid #2a4a7f;border-radius:12px;padding:20px;margin-bottom:16px}
+.school-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+.school-card{background:#0f3460;border:2px solid #4a90d9;border-radius:12px;padding:20px;transition:border-color .2s}
+.school-card:hover{border-color:#7eb8f7}
+.school-card h3{color:#fff;font-size:20px;margin-bottom:8px}
+.school-card .city{color:#9ab8d8;font-size:16px;margin-bottom:12px}
+.school-card .stats{display:flex;gap:16px;margin-bottom:16px}
+.stat-badge{background:#1a3a6a;padding:6px 12px;border-radius:8px;font-size:15px;color:#c8e0f8}
+.btn{display:inline-block;padding:12px 24px;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;border:none;text-align:center;transition:opacity .15s;min-height:48px}
+.btn-primary{background:#4a90d9;color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-success{background:#2ecc71;color:#fff}
+.btn-success:hover{opacity:.85}
+.btn-warning{background:#e67e22;color:#fff}
+.btn-warning:hover{opacity:.85}
+.btn-danger{background:#e74c3c;color:#fff}
+.btn-danger:hover{opacity:.85}
+.btn-sm{padding:8px 16px;font-size:15px;min-height:36px}
+.btn:focus{outline:3px solid #7eb8f7;outline-offset:2px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th{background:#0f3460;color:#a8c8f8;padding:14px 16px;text-align:left;font-size:17px}
+td{padding:12px 16px;border-bottom:1px solid #2a4a7f;font-size:17px;vertical-align:middle}
+tr:hover td{background:#1a3a6a}
+.badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:14px;font-weight:700}
+.badge-blind{background:#7f3030;color:#ffd0d0}
+.badge-lowvision{background:#3a5f20;color:#d0ffd0}
+.badge-teacher{background:#2a4a80;color:#c8d8ff}
+.badge-student{background:#1a3a30;color:#c8f0e8}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:18px;margin-bottom:6px;color:#a8c8f8;font-weight:600}
+.form-group input,.form-group select{width:100%;padding:12px 16px;font-size:18px;background:#0f3460;border:2px solid #4a90d9;border-radius:8px;color:#e8e8f0;outline:none}
+.form-group input:focus,.form-group select:focus{border-color:#7eb8f7}
+.alert{padding:14px 18px;border-radius:8px;margin-bottom:16px;font-size:17px}
+.alert-success{background:#1a4a2a;border:2px solid #2ecc71;color:#a8f0c0}
+.alert-error{background:#4a1a1a;border:2px solid #e74c3c;color:#f0a8a8}
+.search-box{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.search-box input{flex:1;min-width:200px;padding:12px 16px;font-size:18px;background:#0f3460;border:2px solid #4a90d9;border-radius:8px;color:#e8e8f0}
+.search-box input:focus{border-color:#7eb8f7;outline:none}
+@media(max-width:600px){body{font-size:18px}.school-grid{grid-template-columns:1fr}.btn{font-size:16px;padding:10px 18px}th,td{padding:10px 12px;font-size:15px}}
+</style>
+"""
+
+
+def _admin_topbar(role: str, school_name: str = "") -> str:
+    home = "/admin" if role == "superadmin" else "/teacher"
+    label = "Quản trị tổng" if role == "superadmin" else f"GV — {school_name}"
+    return f"""
+<div class="topbar" role="banner">
+  <h1 aria-label="EduVision AI">EduVision AI — {label}</h1>
+  <nav class="nav-links" aria-label="Menu chính">
+    <a href="{home}">Trang chủ</a>
+    <a href="/" aria-label="Về trang học tập">Trang học tập</a>
+    <a href="/auth/logout">Đăng xuất</a>
+  </nav>
+</div>"""
+
+
+def _require_admin(request: Request, min_role: str = "teacher") -> dict:
+    """Kiểm tra auth và trả user. Ném 403 nếu không đủ quyền."""
+    token = request.cookies.get("session", "")
+    user = get_user_by_token(token) if token else None
+    if not user:
+        raise HTTPException(status_code=302, headers={"Location": "/admin/login"})
+    role = user.get("role", "student")
+    allowed = {"superadmin": 3, "teacher": 2, "student": 1}
+    required = {"superadmin": 3, "teacher": 2, "student": 1}
+    if allowed.get(role, 0) < required.get(min_role, 2):
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập trang này.")
+    return user
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+def admin_login_page(msg: str = "") -> HTMLResponse:
+    alert = f'<div class="alert alert-error" role="alert">{msg}</div>' if msg else ""
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng nhập — Quản trị EduVision</title>{_admin_css()}</head>
+<body>
+<div class="topbar"><h1>EduVision AI — Đăng nhập quản trị</h1></div>
+<main>
+  <div class="card" style="max-width:480px;margin:40px auto">
+    <h2>Đăng nhập</h2>
+    {alert}
+    <form method="post" action="/admin/login">
+      <div class="form-group">
+        <label for="username">Tên đăng nhập</label>
+        <input type="text" id="username" name="username" autocomplete="username"
+               placeholder="admin hoặc ndc_giaovien" required autofocus
+               aria-label="Tên đăng nhập quản trị">
+      </div>
+      <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <input type="password" id="password" name="password" autocomplete="current-password"
+               required aria-label="Mật khẩu">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%"
+              aria-label="Đăng nhập vào trang quản trị">Đăng nhập</button>
+    </form>
+    <p style="margin-top:16px;color:#9ab8d8;font-size:16px">
+      Chỉ dành cho giáo viên và quản trị viên.
+      <a href="/" style="color:#7eb8f7">Vào trang học tập →</a>
+    </p>
+  </div>
+</main>
+</body></html>""")
+
+
+@app.post("/admin/login", response_class=HTMLResponse)
+async def admin_login_post(request: Request) -> HTMLResponse:
+    form = await request.form()
+    username = str(form.get("username", "")).strip()
+    password = str(form.get("password", ""))
+    token = auth_login(username, password)
+    if not token:
+        return RedirectResponse(url="/admin/login?msg=Sai+tên+đăng+nhập+hoặc+mật+khẩu", status_code=303)
+    user = get_user_by_token(token)
+    role = user.get("role", "") if user else ""
+    if role not in ("superadmin", "teacher"):
+        auth_logout(token)
+        return RedirectResponse(url="/admin/login?msg=Tài+khoản+không+có+quyền+quản+trị", status_code=303)
+    dest = "/admin" if role == "superadmin" else "/teacher"
+    resp = RedirectResponse(url=dest, status_code=303)
+    resp.set_cookie("session", token, httponly=True, samesite="lax", max_age=7 * 24 * 3600)
+    return resp
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_dashboard(request: Request) -> HTMLResponse:
+    user = _require_admin(request, "superadmin")
+    schools = list_schools()
+    total_students = sum(s["student_count"] for s in schools)
+    total_teachers = sum(s["teacher_count"] for s in schools)
+
+    cards_html = ""
+    for s in schools:
+        cards_html += f"""
+<div class="school-card" role="region" aria-label="Trường {s['name']}">
+  <h3>{s['name']}</h3>
+  <p class="city">📍 {s['city']}</p>
+  <div class="stats">
+    <span class="stat-badge" aria-label="{s['student_count']} học sinh">👨‍🎓 {s['student_count']} HS</span>
+    <span class="stat-badge" aria-label="{s['teacher_count']} giáo viên">👩‍🏫 {s['teacher_count']} GV</span>
+  </div>
+  <a href="/admin/school/{s['code']}" class="btn btn-primary" style="width:100%"
+     aria-label="Quản lý trường {s['name']}">Quản lý trường →</a>
+</div>"""
+
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản trị — EduVision AI</title>{_admin_css()}</head>
+<body>
+{_admin_topbar('superadmin')}
+<main>
+  <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+    <div style="flex:1;text-align:center">
+      <div style="font-size:36px;color:#7eb8f7;font-weight:700">{len(schools)}</div>
+      <div style="color:#9ab8d8">Trường</div>
+    </div>
+    <div style="flex:1;text-align:center">
+      <div style="font-size:36px;color:#2ecc71;font-weight:700">{total_students}</div>
+      <div style="color:#9ab8d8">Học sinh</div>
+    </div>
+    <div style="flex:1;text-align:center">
+      <div style="font-size:36px;color:#e67e22;font-weight:700">{total_teachers}</div>
+      <div style="color:#9ab8d8">Giáo viên</div>
+    </div>
+  </div>
+
+  <h2>Danh sách trường</h2>
+  <div class="school-grid" role="list" aria-label="Danh sách trường khiếm thị">
+    {cards_html}
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Thêm trường mới</h2>
+    <form method="post" action="/admin/add-school" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group" style="flex:1;min-width:150px">
+        <label for="school_code">Mã trường (vd: hcm)</label>
+        <input type="text" id="school_code" name="code" required pattern="[a-z]{{2,10}}"
+               placeholder="hcm" aria-label="Mã trường viết thường không dấu">
+      </div>
+      <div class="form-group" style="flex:2;min-width:200px">
+        <label for="school_name">Tên trường</label>
+        <input type="text" id="school_name" name="name" required placeholder="Trường Khiếm Thị TP.HCM">
+      </div>
+      <div class="form-group" style="flex:1;min-width:130px">
+        <label for="school_city">Tỉnh/Thành</label>
+        <input type="text" id="school_city" name="city" placeholder="TP.HCM">
+      </div>
+      <button type="submit" class="btn btn-success" aria-label="Thêm trường mới">Thêm trường</button>
+    </form>
+  </div>
+</main>
+</body></html>""")
+
+
+@app.post("/admin/add-school")
+async def admin_add_school(request: Request) -> HTMLResponse:
+    _require_admin(request, "superadmin")
+    form = await request.form()
+    code = str(form.get("code", "")).strip().lower()
+    name = str(form.get("name", "")).strip()
+    city = str(form.get("city", "")).strip()
+    if code and name:
+        create_school(code, name, city)
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@app.get("/admin/school/{code}", response_class=HTMLResponse)
+def admin_school_detail(code: str, request: Request, q: str = "") -> HTMLResponse:
+    user = _require_admin(request, "teacher")
+    role = user.get("role", "")
+    # Teacher chỉ xem trường của mình
+    if role == "teacher":
+        school_users = list_school_users("", role="teacher")
+        # tìm school_code của GV này
+        all_users = list_users()
+        me = next((u for u in all_users if u["username"] == user["username"]), None)
+        my_school = me.get("school_code") if me else None
+        if my_school != code:
+            raise HTTPException(status_code=403, detail="Bạn chỉ có thể quản lý trường của mình.")
+
+    school = get_school(code)
+    if not school:
+        raise HTTPException(status_code=404, detail="Không tìm thấy trường.")
+
+    teachers = list_school_users(code, role="teacher")
+    students = list_school_users(code, role="student")
+
+    # Filter theo search
+    q_lower = q.lower()
+    if q_lower:
+        students = [s for s in students if q_lower in s["username"].lower()
+                    or q_lower in (s["display_name"] or "").lower()
+                    or q_lower in (s["student_id"] or "").lower()]
+
+    # Build teacher rows
+    teacher_rows = ""
+    for t in teachers:
+        teacher_rows += f"""
+<tr>
+  <td><strong>{t['username']}</strong></td>
+  <td>{t['display_name'] or '—'}</td>
+  <td><span class="badge badge-teacher">GV</span></td>
+  <td>
+    <form method="post" action="/admin/reset-password" style="display:inline">
+      <input type="hidden" name="username" value="{t['username']}">
+      <input type="hidden" name="redirect" value="/admin/school/{code}">
+      <button type="submit" class="btn btn-warning btn-sm"
+              aria-label="Đặt lại mật khẩu giáo viên {t['username']}"
+              onclick="return confirm('Đặt lại mật khẩu {t['username']} về mặc định 1?')">Đặt lại pass</button>
+    </form>
+  </td>
+</tr>"""
+
+    # Build student rows
+    student_rows = ""
+    for s in students:
+        vision = s.get("vision_status", "")
+        badge = '<span class="badge badge-blind">Mù</span>' if "blind" in (vision or "") else '<span class="badge badge-lowvision">Nhìn kém</span>'
+        student_rows += f"""
+<tr>
+  <td><strong>{s['username']}</strong></td>
+  <td>{s['display_name'] or '—'}</td>
+  <td>{s['student_id'] or '—'}</td>
+  <td>{badge}</td>
+  <td>
+    <form method="post" action="/admin/reset-password" style="display:inline">
+      <input type="hidden" name="username" value="{s['username']}">
+      <input type="hidden" name="redirect" value="/admin/school/{code}?q={q}">
+      <button type="submit" class="btn btn-warning btn-sm"
+              aria-label="Đặt lại mật khẩu {s['username']}"
+              onclick="return confirm('Đặt lại mật khẩu {s['username']} về 1?')">Đặt lại</button>
+    </form>
+  </td>
+</tr>"""
+
+    back = '<a href="/admin" class="btn btn-primary btn-sm">← Danh sách trường</a>' if role == "superadmin" else ""
+
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{school['name']} — Quản trị EduVision</title>{_admin_css()}</head>
+<body>
+{_admin_topbar(role, school['name'])}
+<main>
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px">
+    {back}
+    <h2 style="margin:0">📍 {school['name']} — {school['city']}</h2>
+  </div>
+
+  <h3>Giáo viên ({len(teachers)} người)</h3>
+  <div class="card" style="padding:0;overflow:auto">
+    <table aria-label="Danh sách giáo viên">
+      <thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Vai trò</th><th>Thao tác</th></tr></thead>
+      <tbody>{teacher_rows or '<tr><td colspan="4" style="text-align:center;color:#9ab8d8">Chưa có giáo viên</td></tr>'}</tbody>
+    </table>
+  </div>
+
+  {'<div class="card"><h3 style="margin-top:0">Thêm giáo viên</h3><form method="post" action="/admin/add-teacher" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end"><input type="hidden" name="school_code" value="' + code + '"><div class="form-group" style="flex:1;min-width:160px"><label>Tên đăng nhập GV</label><input type="text" name="username" required placeholder="' + code + '_gv2"></div><div class="form-group" style="flex:2;min-width:180px"><label>Họ tên</label><input type="text" name="display_name" required placeholder="Giáo viên 2"></div><button type="submit" class="btn btn-success">Thêm GV</button></form></div>' if role == "superadmin" else ""}
+
+  <h3>Học sinh ({len(list_school_users(code, 'student'))} người — hiển thị {len(students)})</h3>
+
+  <div class="search-box" role="search" aria-label="Tìm kiếm học sinh">
+    <form method="get" action="/admin/school/{code}" style="display:flex;gap:12px;flex:1;flex-wrap:wrap">
+      <input type="search" name="q" value="{q}" placeholder="Tìm theo tên, mã HS, tên đăng nhập..."
+             aria-label="Tìm học sinh" autocomplete="off">
+      <button type="submit" class="btn btn-primary btn-sm" aria-label="Tìm kiếm">Tìm</button>
+      {'<a href="/admin/school/' + code + '" class="btn btn-sm" style="background:#2a4a7f" aria-label="Xóa bộ lọc">Xem tất cả</a>' if q else ""}
+    </form>
+  </div>
+
+  <div class="card" style="padding:0;overflow:auto">
+    <table aria-label="Danh sách học sinh">
+      <thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Mã HS</th><th>Thị lực</th><th>Thao tác</th></tr></thead>
+      <tbody>{student_rows or '<tr><td colspan="5" style="text-align:center;color:#9ab8d8">Không tìm thấy học sinh</td></tr>'}</tbody>
+    </table>
+  </div>
+</main>
+</body></html>""")
+
+
+@app.post("/admin/reset-password")
+async def admin_reset_password(request: Request) -> HTMLResponse:
+    _require_admin(request, "teacher")
+    form = await request.form()
+    username = str(form.get("username", "")).strip()
+    redirect_to = str(form.get("redirect", "/admin"))
+    if username:
+        reset_user_password(username, "1")
+    return RedirectResponse(url=redirect_to, status_code=303)
+
+
+@app.post("/admin/add-teacher")
+async def admin_add_teacher(request: Request) -> HTMLResponse:
+    _require_admin(request, "superadmin")
+    form = await request.form()
+    username = str(form.get("username", "")).strip()
+    school_code = str(form.get("school_code", "")).strip()
+    display_name = str(form.get("display_name", "")).strip()
+    if username and school_code:
+        try:
+            create_teacher_account(username, "1", school_code, display_name or username)
+        except ValueError:
+            pass
+    return RedirectResponse(url=f"/admin/school/{school_code}", status_code=303)
+
+
+@app.get("/teacher", response_class=HTMLResponse)
+def teacher_dashboard(request: Request) -> HTMLResponse:
+    """GV tự login xem trường của mình — redirect thẳng vào school detail."""
+    user = _require_admin(request, "teacher")
+    all_users = list_users()
+    me = next((u for u in all_users if u["username"] == user["username"]), None)
+    school_code = me.get("school_code") if me else None
+    if not school_code:
+        return HTMLResponse("""<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+<title>GV — EduVision</title></head><body style="font-family:Arial;font-size:20px;padding:40px">
+<h2 style="color:#e74c3c">Tài khoản chưa được gán vào trường.</h2>
+<p>Liên hệ quản trị viên để được phân công trường.</p>
+<a href="/admin/login">Đăng nhập lại</a>
+</body></html>""", status_code=400)
+    return RedirectResponse(url=f"/admin/school/{school_code}", status_code=303)
