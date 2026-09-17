@@ -668,10 +668,11 @@ def web_demo() -> str:
     :root{--red:#c41230;--blue:#12355b;--ink:#172033;--muted:#667085;--line:#d9e2ef;--soft:#f6f8fb;--panel:#fff;font-family:Inter,Arial,sans-serif}
     *{box-sizing:border-box}
     body{margin:0;background:var(--soft);color:var(--ink);overflow-x:hidden;font-size:17px}
-    header{background:#fff;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:100}
-    .topbar{max-width:1180px;margin:0 auto;padding:12px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--blue);font-size:20px;min-width:0;line-height:1.15}
-    .brand div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* ── BRAND BAR (auto-hide on scroll) ── */
+    .brand-bar{position:fixed;top:0;left:0;right:0;height:48px;background:#fff;border-bottom:1.5px solid var(--line);z-index:100;display:flex;align-items:center;padding:0 16px;transform:translateY(0);transition:transform 0.25s ease}
+    .brand-bar.hidden{transform:translateY(-100%)}
+    .brand{font-weight:800;color:var(--blue);font-size:19px;line-height:1.15}
+    body{padding-top:48px}
     /* LANG TOGGLE */
     .lang-toggle{display:inline-flex;flex-wrap:nowrap;gap:0;border:2px solid var(--blue);border-radius:10px;overflow:hidden;flex:0 0 auto;white-space:nowrap}
     .lang-toggle button{padding:9px 16px;font-size:15px;font-weight:800;border:none;cursor:pointer;transition:background 0.15s,color 0.15s;min-height:42px;min-width:58px;white-space:nowrap;flex:0 0 auto}
@@ -712,7 +713,11 @@ def web_demo() -> str:
     .btn-stop-inline{background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer;margin-left:10px}
     .btn-stop-inline:hover{background:#b91c1c}
     @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
-    @media(max-width:560px){body{font-size:16px}.topbar{padding:10px 14px;gap:8px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.lang-toggle button{padding:8px 12px;font-size:14px;min-width:50px}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
+    @media(max-width:560px){body{font-size:16px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
+    /* Account sheet (slide-up from bottom) */
+    .acct-sheet{display:none;position:fixed;bottom:72px;left:0;right:0;max-height:80vh;overflow-y:auto;background:#fff;border-top:2px solid var(--line);border-radius:16px 16px 0 0;padding:20px 18px;z-index:300;box-shadow:0 -4px 32px rgba(0,0,0,0.14)}
+    .acct-sheet.open{display:block}
+    body.lv-dark .acct-sheet{background:#1a1a1a;border-color:#444}
     @media(max-width:360px){.brand{font-size:15px}.lang-toggle button{padding:7px 10px;min-width:46px}.status{grid-template-columns:1fr}}
     /* ── LOW VISION MODE ── */
     body.lv-mode{font-size:1.2em;line-height:1.7;letter-spacing:0.01em}
@@ -774,33 +779,19 @@ def web_demo() -> str:
   onfocus="this.style.left='12px'" onblur="this.style.left='-9999px'">Bỏ qua điều hướng — Skip to content</a>
 <div id="loading-bar"></div>
 
-<header>
-  <div class="topbar">
-    <div class="brand">
-      <div>EduVision AI</div>
-    </div>
-    <!-- HEADER ACTIONS: login + settings + language -->
-    <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
-      <div id="auth-bar">
-        <button id="btn-login-open" onclick="openLoginModal()" aria-label="Đăng nhập"
-          style="background:var(--blue);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:700;min-height:42px;white-space:nowrap">🔑 Đăng nhập</button>
-        <span id="auth-user" style="display:none;font-size:13px;font-weight:700;color:var(--blue);white-space:nowrap"></span>
-        <button id="btn-logout-hdr" onclick="doLogout()" style="display:none;background:#f3f4f6;border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;font-weight:700;min-height:42px">Đăng xuất</button>
-      </div>
-      <button id="btn-settings" onclick="toggleSettings()" aria-label="Cài đặt trợ năng" title="Cài đặt" style="background:#f3f4f6;border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;min-height:42px;line-height:1;color:var(--ink)">⚙</button>
-      <div class="lang-toggle" role="group" aria-label="Chọn ngôn ngữ / Select language">
-        <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Chuyển sang Tiếng Việt">VI</button>
-        <button id="btn-en" onclick="setLang('en')" aria-pressed="false" aria-label="Switch to English">EN</button>
-      </div>
-    </div>
-  </div>
+<!-- Brand bar: thin, auto-hides on scroll down -->
+<div class="brand-bar" id="brand-bar" role="banner">
+  <span class="brand">EduVision AI</span>
+  <button onclick="toggleSettings()" aria-label="Cài đặt trợ năng"
+    style="margin-left:auto;background:transparent;border:0;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1;color:var(--ink)">⚙</button>
+</div>
+
+<main id="main-content">
+  <!-- Hero: scrolls away naturally — no sticky -->
   <div class="hero-wrap">
     <h1 id="hero-title">Trợ lý học tập cho học sinh khiếm thị</h1>
     <p class="lead" id="hero-lead">Giải thích bài học bằng ngôn ngữ dễ hiểu, hỗ trợ hình học, tiếng Anh, đọc tài liệu OCR và lập kế hoạch học tập song ngữ.</p>
   </div>
-</header>
-
-<main id="main-content">
   <div class="status" id="status">
     <div class="stat"><strong>Backend</strong><span>Đang kiểm tra...</span></div>
     <div class="stat"><strong>OCR</strong><span>...</span></div>
@@ -1462,22 +1453,95 @@ async function doLogin() {
 async function doLogout() {
   await fetch('/auth/logout', {method: 'POST'}).catch(function(){});
   _updateAuthBar(null);
+  closeAccountSheet();
 }
 
 function _updateAuthBar(username) {
-  var btnOpen = document.getElementById('btn-login-open');
-  var authUser = document.getElementById('auth-user');
-  var btnLogout = document.getElementById('btn-logout-hdr');
+  // Update account sheet state
+  var loggedout = document.getElementById('acct-loggedout');
+  var loggedin = document.getElementById('acct-loggedin');
+  var dispEl = document.getElementById('as-username-display');
+  var tabIcon = document.getElementById('tab-acct-icon');
+  var tabLabel = document.getElementById('tab-acct-label');
   if (username) {
-    if (btnOpen) btnOpen.style.display = 'none';
-    if (authUser) { authUser.style.display = 'inline'; authUser.textContent = '👤 ' + username; }
-    if (btnLogout) btnLogout.style.display = 'inline-block';
+    if (loggedout) loggedout.style.display = 'none';
+    if (loggedin) loggedin.style.display = 'block';
+    if (dispEl) dispEl.textContent = '👤 ' + username;
+    if (tabIcon) tabIcon.textContent = '✅';
+    if (tabLabel) tabLabel.textContent = username.length > 8 ? username.slice(0,8)+'…' : username;
   } else {
-    if (btnOpen) btnOpen.style.display = 'inline-block';
-    if (authUser) authUser.style.display = 'none';
-    if (btnLogout) btnLogout.style.display = 'none';
+    if (loggedout) loggedout.style.display = 'block';
+    if (loggedin) loggedin.style.display = 'none';
+    if (tabIcon) tabIcon.textContent = '👤';
+    if (tabLabel) tabLabel.textContent = 'Tài khoản';
   }
 }
+
+// Account sheet
+function toggleAccountSheet() {
+  var sheet = document.getElementById('acct-sheet');
+  if (!sheet) return;
+  if (sheet.classList.contains('open')) {
+    sheet.classList.remove('open');
+  } else {
+    sheet.classList.add('open');
+    // Focus first input if logging in
+    var inp = document.getElementById('as-username');
+    var loggedout = document.getElementById('acct-loggedout');
+    if (inp && loggedout && loggedout.style.display !== 'none') setTimeout(function(){ inp.focus(); }, 100);
+  }
+}
+function closeAccountSheet() {
+  var sheet = document.getElementById('acct-sheet');
+  if (sheet) sheet.classList.remove('open');
+}
+
+async function doLoginSheet() {
+  var username = (document.getElementById('as-username') || {}).value || '';
+  var password = (document.getElementById('as-password') || {}).value || '';
+  var msg = document.getElementById('as-msg');
+  if (msg) msg.textContent = '';
+  if (!username || !password) { if(msg){msg.style.color='#ef4444';msg.textContent='Nhập đủ tên đăng nhập và mật khẩu.';} return; }
+  try {
+    var r = await fetch('/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username: username, password: password})
+    });
+    var j = await r.json();
+    if (r.ok) {
+      _updateAuthBar(username);
+      var studentEl = document.getElementById('student');
+      if (studentEl && j.student_id) studentEl.value = j.student_id;
+      var cpUser = document.getElementById('cp-username');
+      if (cpUser) cpUser.value = username;
+      setTimeout(closeAccountSheet, 600);
+    } else {
+      if (msg) { msg.style.color='#ef4444'; msg.textContent='❌ ' + (j.detail || 'Sai tài khoản hoặc mật khẩu'); }
+    }
+  } catch(e) {
+    if (msg) { msg.style.color='#ef4444'; msg.textContent='❌ Lỗi kết nối'; }
+  }
+}
+
+// Auto-hide brand bar on scroll
+(function() {
+  var _lastY = 0;
+  var bar = null;
+  window.addEventListener('scroll', function() {
+    if (!bar) bar = document.getElementById('brand-bar');
+    if (!bar) return;
+    var cur = window.scrollY;
+    if (cur < 10) {
+      bar.classList.remove('hidden');
+    } else if (cur > _lastY + 8) {
+      bar.classList.add('hidden');
+      closeAccountSheet();
+    } else if (cur < _lastY - 8) {
+      bar.classList.remove('hidden');
+    }
+    _lastY = cur;
+  }, {passive: true});
+})();
 
 // Check session on load
 (async function checkSession() {
@@ -1674,6 +1738,14 @@ if ('serviceWorker' in navigator) {
   <button class="settings-close" onclick="toggleSettings()" aria-label="Đóng cài đặt">×</button>
   <h3 style="margin:0 0 16px;color:var(--blue)">⚙ Cài đặt trợ năng</h3>
 
+  <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+    <span style="font-weight:600">🌐 Ngôn ngữ / Language</span>
+    <div class="lang-toggle" role="group" aria-label="Chọn ngôn ngữ / Select language">
+      <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Tiếng Việt">VI</button>
+      <button id="btn-en" onclick="setLang('en')" aria-pressed="false" aria-label="English">EN</button>
+    </div>
+  </div>
+
   <div class="settings-row">
     <label for="lv-toggle-check" style="font-weight:600;cursor:pointer;flex:1">👁 Chế độ Low Vision</label>
     <label class="toggle-switch">
@@ -1734,10 +1806,38 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- Account sheet: slides up from bottom on mobile -->
+<div class="acct-sheet" id="acct-sheet" role="dialog" aria-label="Tài khoản" aria-modal="true">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <span style="font-weight:800;font-size:16px;color:var(--blue)">👤 Tài khoản</span>
+    <button onclick="closeAccountSheet()" aria-label="Đóng" style="border:0;background:transparent;font-size:26px;cursor:pointer;color:var(--muted);line-height:1;padding:2px 6px">×</button>
+  </div>
+  <!-- Logged-out state -->
+  <div id="acct-loggedout">
+    <p style="color:var(--muted);font-size:15px;margin:0 0 12px">Đăng nhập để lưu tiến độ học tập.</p>
+    <div style="display:grid;gap:10px">
+      <input type="text" id="as-username" placeholder="Tên đăng nhập (vd: ndc001)" autocomplete="username"
+        aria-label="Tên đăng nhập" style="padding:12px;border:1.5px solid var(--line);border-radius:10px;font-size:16px;width:100%;box-sizing:border-box"/>
+      <input type="password" id="as-password" placeholder="Mật khẩu" autocomplete="current-password"
+        aria-label="Mật khẩu" style="padding:12px;border:1.5px solid var(--line);border-radius:10px;font-size:16px;width:100%;box-sizing:border-box"/>
+      <button onclick="doLoginSheet()"
+        style="background:var(--blue);color:#fff;border:0;border-radius:10px;padding:14px;font-weight:700;cursor:pointer;font-size:16px;min-height:48px">🔑 Đăng nhập</button>
+      <p id="as-msg" style="margin:0;font-weight:600;font-size:14px;min-height:18px"></p>
+    </div>
+  </div>
+  <!-- Logged-in state -->
+  <div id="acct-loggedin" style="display:none">
+    <p id="as-username-display" style="font-size:16px;font-weight:700;color:var(--blue);margin:0 0 16px"></p>
+    <button onclick="doLogout()"
+      style="width:100%;background:#f3f4f6;border:1.5px solid var(--line);border-radius:10px;padding:13px;font-weight:700;cursor:pointer;font-size:16px;color:var(--ink);min-height:48px">Đăng xuất</button>
+  </div>
+</div>
+
 <nav class="tab-nav" role="navigation" aria-label="Điều hướng chính">
   <button class="tab-btn active" data-tab="ask" onclick="showTab('ask')" aria-pressed="true"><span class="t-icon">🤖</span>Hỏi AI</button>
   <button class="tab-btn" data-tab="result" onclick="showTab('result')" aria-pressed="false"><span class="t-icon">📋</span>Kết quả</button>
   <button class="tab-btn" data-tab="tools" onclick="showTab('tools')" aria-pressed="false"><span class="t-icon">🛠</span>Công cụ</button>
+  <button class="tab-btn" id="tab-acct" onclick="toggleAccountSheet()" aria-pressed="false"><span class="t-icon" id="tab-acct-icon">👤</span><span id="tab-acct-label">Tài khoản</span></button>
 </nav>
 </body>
 </html>"""
