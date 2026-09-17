@@ -1547,7 +1547,7 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 // Ensure voices are loaded before first use
 window.speechSynthesis && window.speechSynthesis.getVoices();
 window.speechSynthesis && window.speechSynthesis.addEventListener('voiceschanged', () => {});
-// Init after full DOM is ready (settings panel btn-vi/btn-en are after </script>)
+// Init after full DOM is ready (settings panel rendered after the script tag)
 document.addEventListener('DOMContentLoaded', function() {
   setLang(LANG);
   refreshStatus();
