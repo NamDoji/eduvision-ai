@@ -1564,24 +1564,30 @@ async function doLoginSheet() {
   }
 }
 
-// Auto-hide brand bar on scroll
+// Auto-hide brand bar on scroll — works on iOS Safari + Android
 (function() {
   var _lastY = 0;
   var bar = null;
-  window.addEventListener('scroll', function() {
+  function getScrollY() {
+    return window.scrollY !== undefined ? window.scrollY
+      : (document.documentElement.scrollTop || document.body.scrollTop || 0);
+  }
+  function onScroll() {
     if (!bar) bar = document.getElementById('brand-bar');
     if (!bar) return;
-    var cur = window.scrollY;
+    var cur = getScrollY();
     if (cur < 10) {
       bar.classList.remove('hidden');
-    } else if (cur > _lastY + 8) {
+    } else if (cur > _lastY + 5) {
       bar.classList.add('hidden');
       closeAccountSheet();
-    } else if (cur < _lastY - 8) {
+    } else if (cur < _lastY - 5) {
       bar.classList.remove('hidden');
     }
     _lastY = cur;
-  }, {passive: true});
+  }
+  window.addEventListener('scroll', onScroll, {passive: true});
+  document.addEventListener('scroll', onScroll, {passive: true});
 })();
 
 // Check session on load — auto-fill student ID và đổi mật khẩu username
