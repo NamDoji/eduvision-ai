@@ -1,0 +1,13 @@
+services:
+  eduvision:
+    build: .
+    ports:
+      - "8010:8010"
+    volumes:
+      - eduvision_data:/data
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  eduvision_data:

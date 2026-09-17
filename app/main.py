@@ -12,9 +12,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
+from app.auth import (
+    init_auth_db, login as auth_login, logout as auth_logout,
+    get_user_by_token, create_student_account, list_users,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -135,6 +139,19 @@ def init_db() -> None:
 @app.on_event("startup")
 def startup() -> None:
     init_db()
+    init_auth_db()
+
+
+def _get_current_user(request: Request) -> Optional[dict]:
+    token = request.cookies.get("session") or request.headers.get("X-Session-Token", "")
+    return get_user_by_token(token)
+
+
+def _require_teacher(request: Request) -> dict:
+    user = _get_current_user(request)
+    if not user or user["role"] != "teacher":
+        raise HTTPException(status_code=403, detail="Chỉ giáo viên mới có quyền truy cập")
+    return user
 
 
 def get_profile(student_id: str) -> Dict[str, Any]:
@@ -1313,18 +1330,205 @@ def command(payload: CommandRequest) -> Dict[str, Any]:
 def tts(payload: TTSRequest) -> Dict[str, str]:
     TTS_DIR.mkdir(parents=True, exist_ok=True)
     text = payload.text[:2500]
-    out = TTS_DIR / f"eduvision-{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.aiff"
-    if not shutil.which("say"):
-        return {"status": "unavailable", "message": "macOS say command is not available."}
-    voice = payload.voice or default_voice(payload.language)
-    subprocess.run(["say", "-v", voice, "-o", str(out), text], check=True)
-    return {"status": "ok", "language": payload.language, "voice": voice, "audio_url": f"/media/tts/{out.name}", "file": str(out)}
+    fname_base = f"eduvision-{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}"
+    lang_code = "vi" if payload.language == "vi" else "en"
+
+    # Thử gTTS trước (cross-platform, tiếng Việt tốt)
+    try:
+        from gtts import gTTS
+        out = TTS_DIR / f"{fname_base}.mp3"
+        gTTS(text=text, lang=lang_code, slow=False).save(str(out))
+        return {
+            "status": "ok", "engine": "gtts",
+            "language": payload.language,
+            "audio_url": f"/media/tts/{out.name}", "file": str(out),
+        }
+    except Exception:
+        pass
+
+    # Fallback: macOS say
+    if shutil.which("say"):
+        out = TTS_DIR / f"{fname_base}.aiff"
+        voice = payload.voice or default_voice(payload.language)
+        subprocess.run(["say", "-v", voice, "-o", str(out), text], check=True)
+        return {
+            "status": "ok", "engine": "say",
+            "language": payload.language, "voice": voice,
+            "audio_url": f"/media/tts/{out.name}", "file": str(out),
+        }
+
+    return {"status": "unavailable", "message": "Không có engine TTS. Cài gTTS: pip install gtts"}
 
 
 @app.get("/media/tts/{filename}")
 def tts_file(filename: str) -> FileResponse:
-    return FileResponse(TTS_DIR / filename, media_type="audio/aiff", filename=filename)
+    f = TTS_DIR / filename
+    mime = "audio/mpeg" if filename.endswith(".mp3") else "audio/aiff"
+    return FileResponse(f, media_type=mime, filename=filename)
 
+
+## ── AUTH ──────────────────────────────────────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+@app.post("/auth/login")
+def do_login(payload: LoginRequest) -> JSONResponse:
+    token = auth_login(payload.username, payload.password)
+    if not token:
+        raise HTTPException(status_code=401, detail="Sai tên đăng nhập hoặc mật khẩu")
+    resp = JSONResponse({"status": "ok", "token": token})
+    resp.set_cookie("session", token, httponly=True, samesite="lax", max_age=7 * 24 * 3600)
+    return resp
+
+@app.post("/auth/logout")
+def do_logout(request: Request) -> JSONResponse:
+    token = request.cookies.get("session", "")
+    auth_logout(token)
+    resp = JSONResponse({"status": "ok"})
+    resp.delete_cookie("session")
+    return resp
+
+@app.get("/auth/me")
+def me(request: Request) -> Dict[str, Any]:
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Chưa đăng nhập")
+    return user
+
+
+## ── TEACHER DASHBOARD ────────────────────────────────────────────────────────
+
+class CreateStudentRequest(BaseModel):
+    username: str
+    password: str
+    student_id: str
+    display_name: str
+    grade: str = "Lớp 8"
+    vision_status: str = "low vision"
+
+@app.post("/teacher/students")
+def teacher_create_student(payload: CreateStudentRequest, request: Request) -> Dict[str, Any]:
+    _require_teacher(request)
+    try:
+        account = create_student_account(
+            payload.username, payload.password, payload.student_id, payload.display_name
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    profile = {
+        "student_id": payload.student_id,
+        "name": payload.display_name,
+        "grade": payload.grade,
+        "vision_status": payload.vision_status,
+        "math_level": "",
+        "english_level": "",
+        "weaknesses": [],
+        "strengths": [],
+        "learning_goal": "",
+    }
+    save_profile(profile)
+    return {"status": "ok", "account": account}
+
+@app.get("/teacher/students")
+def teacher_list_students(request: Request) -> List[Dict[str, Any]]:
+    _require_teacher(request)
+    return list_users()
+
+@app.get("/teacher", response_class=HTMLResponse)
+def teacher_dashboard(request: Request) -> HTMLResponse:
+    user = _get_current_user(request)
+    auth_html = ""
+    if user and user["role"] == "teacher":
+        users = list_users()
+        rows = "".join(
+            f"<tr><td>{u['display_name'] or u['username']}</td><td>{u['role']}</td>"
+            f"<td>{u.get('student_id','—')}</td><td>{u['created_at'][:10]}</td></tr>"
+            for u in users
+        )
+        auth_html = f"""
+<div style="background:#e8f5e9;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+  <b>Xin chào, {user['display_name'] or user['username']}!</b> &nbsp;
+  <button onclick="fetch('/auth/logout',{{method:'POST'}}).then(()=>location.reload())"
+    style="float:right;background:#ef4444;color:#fff;border:0;border-radius:8px;padding:6px 14px;cursor:pointer;">
+    Đăng xuất
+  </button>
+</div>
+<h2 style="margin-top:0;">Danh sách tài khoản</h2>
+<table border="1" cellpadding="8" cellspacing="0" style="width:100%;border-collapse:collapse;border-color:#e5e7eb;">
+  <thead style="background:#f3f4f6;"><tr><th>Tên</th><th>Vai trò</th><th>Mã HS</th><th>Ngày tạo</th></tr></thead>
+  <tbody>{rows}</tbody>
+</table>
+<h2 style="margin-top:32px;">Tạo tài khoản học sinh</h2>
+<form id="cf" style="display:grid;gap:10px;max-width:420px;">
+  <input name="display_name" placeholder="Họ tên học sinh *" required style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+  <input name="username" placeholder="Tên đăng nhập *" required style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+  <input name="password" type="password" placeholder="Mật khẩu *" required style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+  <input name="student_id" placeholder="Mã HS (VD: S002) *" required style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+  <input name="grade" placeholder="Lớp (VD: Lớp 8)" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+  <select name="vision_status" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+    <option value="low vision">Thị lực kém</option>
+    <option value="blind">Mù hoàn toàn</option>
+    <option value="partial vision">Thị lực một phần</option>
+  </select>
+  <button type="submit" style="background:#1565C0;color:#fff;border:0;border-radius:8px;padding:10px;cursor:pointer;font-weight:700;">
+    Tạo tài khoản
+  </button>
+  <p id="msg" style="color:#16a34a;font-weight:600;"></p>
+</form>
+<script>
+document.getElementById('cf').addEventListener('submit', async e => {{
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(e.target));
+  const r = await fetch('/teacher/students', {{
+    method:'POST', headers:{{'Content-Type':'application/json'}},
+    body: JSON.stringify(d)
+  }});
+  const j = await r.json();
+  document.getElementById('msg').textContent = r.ok ? '✅ Tạo thành công!' : '❌ ' + (j.detail || 'Lỗi');
+  if (r.ok) {{ e.target.reset(); setTimeout(()=>location.reload(), 1500); }}
+}});
+</script>"""
+    else:
+        auth_html = """
+<h2>Đăng nhập giáo viên</h2>
+<form id="lf" style="display:grid;gap:10px;max-width:320px;">
+  <input name="username" placeholder="Tên đăng nhập" required style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+  <input name="password" type="password" placeholder="Mật khẩu" required style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+  <button type="submit" style="background:#1565C0;color:#fff;border:0;border-radius:8px;padding:10px;cursor:pointer;font-weight:700;">
+    Đăng nhập
+  </button>
+  <p id="err" style="color:#ef4444;font-weight:600;"></p>
+</form>
+<script>
+document.getElementById('lf').addEventListener('submit', async e => {
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(e.target));
+  const r = await fetch('/auth/login', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(d)
+  });
+  const j = await r.json();
+  if (r.ok) location.reload();
+  else document.getElementById('err').textContent = j.detail || 'Đăng nhập thất bại';
+});
+</script>"""
+
+    return HTMLResponse(f"""<!DOCTYPE html><html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EduVision AI — Giáo viên</title>
+<style>
+body{{font-family:system-ui,sans-serif;max-width:860px;margin:0 auto;padding:24px 16px;color:#111827;}}
+h1{{color:#12355b;}} table{{font-size:14px;}} th,td{{text-align:left;}}
+</style>
+</head><body>
+<h1>🎓 EduVision AI — Quản lý giáo viên</h1>
+{auth_html}
+<p style="margin-top:32px;"><a href="/">← Về trang học sinh</a></p>
+</body></html>""")
+
+
+## ── DEMO RESET ────────────────────────────────────────────────────────────────
 
 @app.post("/demo/reset")
 def reset_demo(x_reset_token: str = Header(default="")) -> Dict[str, Any]:
