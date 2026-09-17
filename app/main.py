@@ -916,12 +916,6 @@ def web_demo() -> str:
           <button class="btn ghost" id="btn-repeat" onclick="repeatLast()" style="display:none" aria-label="Hỏi lại câu trước">↩ Hỏi lại</button>
           <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép chữ Braille vào clipboard">⠿ Braille</button>
         </div>
-        <!-- Demo: hàng riêng -->
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-          <span style="font-size:13px;color:var(--muted);align-self:center;margin-right:2px">Dùng thử:</span>
-          <button class="btn blue" onclick="loadDemo('geometry')" id="btn-demo-geo" style="font-size:14px;padding:8px 14px;min-height:40px">📐 Hình học</button>
-          <button class="btn blue" onclick="loadDemo('english')" id="btn-demo-eng" style="font-size:14px;padding:8px 14px;min-height:40px">🗣 Tiếng Anh</button>
-        </div>
         <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span><button class="btn-stop-inline" onclick="stopSpeech(true)">⏹ Dừng</button></div>
       </div>
 
@@ -1090,8 +1084,6 @@ function setLang(lang) {
   document.getElementById('opt-eng').textContent = T.optEng;
   document.getElementById('opt-gen').textContent = T.optGen;
   document.getElementById('btn-ask').textContent = T.btnAsk;
-  document.getElementById('btn-demo-geo').textContent = T.btnDemoGeo;
-  document.getElementById('btn-demo-eng').textContent = T.btnDemoEng;
   updateSpeakButton();
   document.getElementById('plan-title').textContent = T.planTitle;
   document.getElementById('lbl-weak').textContent = T.lblWeak;
