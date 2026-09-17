@@ -1703,17 +1703,28 @@ async function describeImage() {
 // ── LOGIN MODAL ───────────────────────────────────────────────────────────────
 function openLoginModal() {
   var m = document.getElementById('login-modal');
-  if (m) { m.style.display = 'flex'; setTimeout(function(){ document.getElementById('login-username').focus(); }, 100); }
+  if (m) { m.style.display = 'flex'; }
 }
 function closeLoginModal() {
   var m = document.getElementById('login-modal');
   if (m) m.style.display = 'none';
 }
-// Close on backdrop click
+// Close on backdrop click (not on dialog content)
 document.addEventListener('click', function(e) {
   var m = document.getElementById('login-modal');
-  if (m && e.target === m) closeLoginModal();
+  if (m && m.style.display !== 'none' && e.target === m) closeLoginModal();
 });
+// Prevent clicks inside dialog from bubbling to backdrop
+(function() {
+  var attachStop = function() {
+    var m = document.getElementById('login-modal');
+    if (!m) return;
+    var dialog = m.firstElementChild;
+    if (dialog) dialog.addEventListener('click', function(e) { e.stopPropagation(); });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attachStop);
+  else attachStop();
+})();
 
 async function doLogin() {
   var username = (document.getElementById('login-username').value || '').trim();
