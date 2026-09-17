@@ -1,86 +1,107 @@
-# EduVision AI Local Conference Demo
+# EduVision AI
 
-EduVision AI is an OpenClaw-based learning assistant for visually impaired and low-vision students.
+Trợ lý học tập thông minh cho học sinh **khiếm thị và thị lực kém** — hỗ trợ tiếng Việt và tiếng Anh.
 
-## Components
+Được xây dựng bởi **Đỗ Bảo Nam** để tặng miễn phí cho các trường khiếm thị tại Việt Nam.
 
-- OpenClaw Gateway for Telegram/Zalo/WhatsApp/Web entry points
-- EduVision Skill: `eduvision-ai`
-- FastAPI backend with `/ask`, `/ocr`, `/study-plan`, `/command`, `/profile`, `/report`, `/tts`, `/vision-status`, `/demo/reset`
-- SQLite student profile and learning history database
-- Training data seeds: `train.csv`, `train.jsonl`
-- RAG seed knowledge base
-- Local web demo at `/`
-- Google Vision OCR integration when credentials are configured
-- Tesseract OCR fallback for local image OCR
-- Upload storage in `uploads/`
-- Audio output storage in `audio_outputs/`
-- macOS voice output through `say`
-- Language selector for English/Vietnamese responses and matching TTS voices (`Samantha` for English, `Linh` for Vietnamese)
-- Conference documents: `DEMO_GUIDE.md`, `TECHNICAL_REPORT.md`
-- Prepared OCR demo image: `demo_assets/demo_geometry_ocr.png`
+---
 
-## Run Locally
+## Tính năng
+
+- Giải thích bài học bằng ngôn ngữ xúc giác (không dùng hình ảnh)
+- OCR đọc đề bài từ ảnh chụp — 5 tầng fallback, chạy offline lẫn online
+- Text-to-Speech tiếng Việt và tiếng Anh
+- Kế hoạch học tập cá nhân
+- Song ngữ Việt / Anh trong mọi câu trả lời
+- Chi phí vận hành gần 0đ (dùng Groq free tier)
+
+---
+
+## Cài đặt (5 bước)
+
+**Yêu cầu**: Python 3.12, pip, git
 
 ```bash
-cd /Users/cuongdoji/.openclaw/workspace/code_projects/eduvision-ai
+# 1. Clone repo
+git clone https://github.com/NamDoji/eduvision-ai.git
+cd eduvision-ai
+
+# 2. Tạo môi trường ảo
 python3 -m venv .venv
-. .venv/bin/activate
+source .venv/bin/activate        # macOS/Linux
+# .venv\Scripts\activate         # Windows
+
+# 3. Cài thư viện
 pip install -r requirements.txt
+
+# 4. Cấu hình API key
+cp .env.example .env
+# Mở file .env, điền GROQ_API_KEY (lấy miễn phí tại https://console.groq.com)
+
+# 5. Khởi động
 uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
 ```
 
-## Test
+Mở trình duyệt: **http://localhost:8010**
+
+---
+
+## Lấy Groq API Key (miễn phí)
+
+1. Truy cập https://console.groq.com → Đăng ký bằng Google
+2. Vào **API Keys** → **Create API Key**
+3. Sao chép key (bắt đầu bằng `gsk_...`) vào file `.env`
+
+---
+
+## Kiểm tra nhanh
 
 ```bash
-curl http://127.0.0.1:8010/health
-curl http://127.0.0.1:8010/vision-status
+# Kiểm tra hệ thống
+curl http://localhost:8010/health
 
-curl -X POST http://127.0.0.1:8010/ask \
+# Hỏi bài (tiếng Việt)
+curl -X POST http://localhost:8010/ask \
   -H 'Content-Type: application/json' \
-  -d '{"student_id":"S001","question":"I do not understand an isosceles triangle","subject":"geometry","language":"en"}'
+  -d '{"student_id":"S001","question":"Giải thích tam giác cân cho học sinh khiếm thị","subject":"geometry","language":"vi"}'
 
-curl -X POST http://127.0.0.1:8010/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"student_id":"S001","question":"Giải thích định lý Pythagore cho học sinh nhìn mờ","subject":"geometry","language":"vi"}'
-
-curl -X POST http://127.0.0.1:8010/command \
-  -H 'Content-Type: application/json' \
-  -d '{"student_id":"S001","message":"/english I have many meeting today","language":"vi"}'
-
-curl -X POST http://127.0.0.1:8010/tts \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"Xin chào, đây là EduVision AI.","language":"vi"}'
-
-curl http://127.0.0.1:8010/report/S001
-curl -X POST http://127.0.0.1:8010/demo/reset
+# OCR ảnh đề bài
+curl -X POST http://localhost:8010/ocr \
+  -F "file=@demo_assets/demo_geometry_ocr.png"
 ```
 
-Python tests:
+---
 
-```bash
-pytest
+## Kịch bản demo tại trường
+
+Xem file **`DEMO_GUIDE.md`** — kịch bản demo 5 phút đầy đủ, kèm kế hoạch dự phòng khi mất mạng.
+
+---
+
+## Cấu trúc dự án
+
+```
+app/
+  main.py           — FastAPI backend + UI
+  llm_service.py    — Groq Llama 3.3 70B
+  ocr_service.py    — OCR 5 tầng fallback
+  accessibility.py  — Bộ lọc ngôn ngữ xúc giác
+  rag_service.py    — Tìm kiếm kho tri thức
+data/
+  knowledge_base.md — Kho tri thức học tập
+  student_profiles.json
+demo_assets/        — Ảnh demo OCR
+tests/              — pytest
 ```
 
-## Google Vision
+---
 
-Google Vision support is already coded. To enable it, set a service-account credential before starting the backend:
+## Tài liệu kỹ thuật
 
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/google-vision-service-account.json
-uvicorn app.main:app --host 0.0.0.0 --port 8010
-```
+Xem **`TECHNICAL_REPORT.md`** để biết kiến trúc, bảo mật, và roadmap.
 
-Without that variable, the backend uses Tesseract when installed, then PDF/text fallback.
+---
 
-## Conference Demo
+## License
 
-Open `DEMO_GUIDE.md` for the 5-minute demo script and fallback plan.
-
-## Security Notes
-
-- Keep OpenClaw tool policy narrow.
-- Do not grant shell/email/calendar access to student-facing sessions.
-- Store student profiles with privacy controls.
-- Log requests but mask personally identifiable data in reports.
-- Escalate unsafe or non-learning content to teacher/parent review.
+MIT © 2026 Đỗ Bảo Nam — Miễn phí cho mọi mục đích giáo dục, kể cả sửa đổi và phân phối lại.

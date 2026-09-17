@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -1327,7 +1327,10 @@ def tts_file(filename: str) -> FileResponse:
 
 
 @app.post("/demo/reset")
-def reset_demo() -> Dict[str, Any]:
+def reset_demo(x_reset_token: str = Header(default="")) -> Dict[str, Any]:
+    token = os.getenv("DEMO_RESET_TOKEN", "")
+    if not token or x_reset_token != token:
+        raise HTTPException(status_code=403, detail="Forbidden")
     init_db()
     with db() as conn:
         conn.execute("DELETE FROM learning_events")
