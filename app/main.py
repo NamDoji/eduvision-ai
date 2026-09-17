@@ -891,10 +891,8 @@ def web_demo() -> str:
 
       <!-- VISION DESCRIBE -->
       <div class="card">
-        <h2 id="vision-title">📸 Giáo viên mô tả hình vẽ</h2>
-        <p class="vision-hint" id="vision-hint">Dành cho <strong>giáo viên / phụ huynh</strong>: chụp ảnh bài toán có hình vẽ → AI đọc mô tả bằng lời cho học sinh nghe.</p>
-        <p style="font-size:14px;color:var(--muted);background:#fef9ec;border-left:3px solid #f59e0b;padding:8px 12px;border-radius:0 6px 6px 0;margin:0 0 12px">
-          💡 Học sinh: nhờ thầy/cô hoặc ba/mẹ chụp ảnh hình vẽ rồi bấm "Mô tả" — AI sẽ đọc kết quả to.</p>
+        <h2 id="vision-title">👁 Mô tả hình vẽ</h2>
+        <p class="vision-hint" id="vision-hint">Chụp ảnh bài toán hoặc hình vẽ — AI mô tả chi tiết bằng lời những phần khó nhìn rõ.</p>
         <input id="visionFile" type="file" accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh hình vẽ cần mô tả"/>
         <div class="actions">
           <button class="btn" onclick="describeImage()" id="btn-vision">📸 Mô tả hình</button>
@@ -1219,8 +1217,6 @@ async function askTutor() {
     const text = await readResponse(res);
     setResult(text);
     fetchAndShowBraille(text);
-    // Auto-TTS: đọc ngay khi AI trả lời xong — người mù không cần bấm thêm bước
-    setTimeout(function() { speakResult(); }, 400);
   } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
