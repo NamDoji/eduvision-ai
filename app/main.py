@@ -2544,70 +2544,147 @@ def _admin_css() -> str:
     return """
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:20px;line-height:1.6;background:#1a1a2e;color:#e8e8f0;min-height:100vh}
-a{color:#7eb8f7;text-decoration:none}
+:root{
+  --red:#c41230;--red-dk:#9a0e26;
+  --blue:#1e3a6e;--blue-mid:#2a5298;--blue-lt:#5a96e0;
+  --ink:#e8eaf0;--muted:#8aabcc;--muted2:#5a7a9a;
+  --bg:#0b1622;--surf:#111f33;--card:#182840;--card2:#0e1d30;
+  --line:#1e3050;--line2:#162640;
+  --green:#27ae60;--orange:#d4791a;--danger:#c0392b;
+}
+html{scroll-behavior:smooth}
+body{font-family:Inter,'Segoe UI',Arial,sans-serif;font-size:17px;line-height:1.6;background:var(--bg);color:var(--ink);min-height:100vh}
+a{color:var(--blue-lt);text-decoration:none}
 a:hover{text-decoration:underline}
-.topbar{background:#16213e;padding:16px 24px;display:flex;align-items:center;gap:16px;border-bottom:3px solid #4a90d9;flex-wrap:wrap}
-.topbar h1{font-size:22px;color:#fff;flex:1}
-.topbar .nav-links{display:flex;gap:12px;flex-wrap:wrap}
-.topbar .nav-links a{background:#2a4a7f;color:#fff;padding:8px 16px;border-radius:8px;font-size:16px;font-weight:600}
-.topbar .nav-links a:hover{background:#3a6aaf}
-main{max-width:1000px;margin:0 auto;padding:24px 20px}
-h2{font-size:26px;color:#7eb8f7;margin:24px 0 16px;padding-bottom:8px;border-bottom:2px solid #2a4a7f}
-h3{font-size:21px;color:#a8c8f8;margin:16px 0 10px}
-.card{background:#16213e;border:2px solid #2a4a7f;border-radius:12px;padding:20px;margin-bottom:16px}
-.school-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px}
-.school-card{background:#0f3460;border:2px solid #4a90d9;border-radius:12px;padding:20px;transition:border-color .2s}
-.school-card:hover{border-color:#7eb8f7}
-.school-card h3{color:#fff;font-size:20px;margin-bottom:8px}
-.school-card .city{color:#9ab8d8;font-size:16px;margin-bottom:12px}
-.school-card .stats{display:flex;gap:16px;margin-bottom:16px}
-.stat-badge{background:#1a3a6a;padding:6px 12px;border-radius:8px;font-size:15px;color:#c8e0f8}
-.btn{display:inline-block;padding:12px 24px;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;border:none;text-align:center;transition:opacity .15s;min-height:48px}
-.btn-primary{background:#4a90d9;color:#fff}
-.btn-primary:hover{opacity:.85}
-.btn-success{background:#2ecc71;color:#fff}
-.btn-success:hover{opacity:.85}
-.btn-warning{background:#e67e22;color:#fff}
-.btn-warning:hover{opacity:.85}
-.btn-danger{background:#e74c3c;color:#fff}
-.btn-danger:hover{opacity:.85}
-.btn-sm{padding:8px 16px;font-size:15px;min-height:36px}
-.btn:focus{outline:3px solid #7eb8f7;outline-offset:2px}
-table{width:100%;border-collapse:collapse;margin-top:12px}
-th{background:#0f3460;color:#a8c8f8;padding:14px 16px;text-align:left;font-size:17px}
-td{padding:12px 16px;border-bottom:1px solid #2a4a7f;font-size:17px;vertical-align:middle}
-tr:hover td{background:#1a3a6a}
-.badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:14px;font-weight:700}
-.badge-blind{background:#7f3030;color:#ffd0d0}
-.badge-lowvision{background:#3a5f20;color:#d0ffd0}
-.badge-teacher{background:#2a4a80;color:#c8d8ff}
-.badge-student{background:#1a3a30;color:#c8f0e8}
+/* Skip nav */
+.skip-nav{position:absolute;top:-100%;left:0;padding:10px 20px;background:var(--red);color:#fff;font-weight:700;z-index:9999;border-radius:0 0 8px 0}
+.skip-nav:focus{top:0}
+/* Topbar */
+.topbar{background:var(--surf);padding:0 24px;display:flex;align-items:center;gap:0;border-bottom:3px solid var(--red);min-height:60px;flex-wrap:wrap;position:sticky;top:0;z-index:200}
+.topbar-brand{font-size:19px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;padding:10px 0;flex:1;white-space:nowrap}
+.topbar-brand .ev{color:var(--red)}
+.topbar-sub{font-size:13px;color:var(--muted);font-weight:400;margin-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.topbar-nav{display:flex;gap:4px;flex-wrap:wrap;padding:8px 0}
+.topbar-nav a{color:var(--muted);padding:8px 14px;border-radius:8px;font-size:15px;font-weight:600;transition:background .15s,color .15s;min-height:44px;display:inline-flex;align-items:center}
+.topbar-nav a:hover,.topbar-nav a:focus{background:var(--card);color:#fff;outline:none;text-decoration:none}
+.topbar-nav a:focus-visible{outline:3px solid var(--blue-lt);outline-offset:2px}
+.topbar-nav a.logout{color:#e8876a}
+/* Layout */
+main{max-width:1060px;margin:0 auto;padding:24px 20px}
+/* Headings */
+h2{font-size:22px;color:#fff;margin:24px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--line);display:flex;align-items:center;gap:8px}
+h2:first-child{margin-top:0}
+h3{font-size:18px;color:var(--muted);margin:18px 0 10px;display:flex;align-items:center;gap:6px}
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.stat-tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 16px;text-align:center}
+.stat-tile .num{font-size:38px;font-weight:700;line-height:1.1}
+.stat-tile .lbl{color:var(--muted);font-size:14px;margin-top:4px}
+.num-blue{color:var(--blue-lt)}
+.num-green{color:var(--green)}
+.num-orange{color:var(--orange)}
+/* Card */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}
+.card-flush{padding:0;overflow:hidden}
+/* School grid */
+.school-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:22px}
+.school-card{background:var(--card2);border:2px solid var(--line2);border-radius:14px;padding:20px;transition:border-color .2s,transform .1s;display:flex;flex-direction:column}
+.school-card:hover{border-color:var(--blue-lt);transform:translateY(-2px)}
+.school-card h3{color:#fff;font-size:18px;margin:0 0 4px}
+.school-card .city{color:var(--muted);font-size:14px;margin-bottom:12px}
+.stat-badges{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.stat-badge{background:var(--surf);padding:5px 10px;border-radius:7px;font-size:14px;color:var(--muted)}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s,transform .1s;min-height:48px;text-decoration:none;line-height:1;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:3px solid var(--blue-lt);outline-offset:2px}
+.btn-primary{background:var(--blue-mid);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-success{background:#1c6636;color:#c8f0d8}
+.btn-warning{background:#6e3c0e;color:#f8d0a8}
+.btn-danger{background:#621010;color:#f8c0c0}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--line)}
+.btn-ghost:hover{background:var(--card);color:#fff}
+.btn:hover{opacity:.88}
+.btn-sm{padding:8px 14px;font-size:14px;min-height:40px}
+.btn-block{width:100%}
+/* Forms */
 .form-group{margin-bottom:16px}
-.form-group label{display:block;font-size:18px;margin-bottom:6px;color:#a8c8f8;font-weight:600}
-.form-group input,.form-group select{width:100%;padding:12px 16px;font-size:18px;background:#0f3460;border:2px solid #4a90d9;border-radius:8px;color:#e8e8f0;outline:none}
-.form-group input:focus,.form-group select:focus{border-color:#7eb8f7}
-.alert{padding:14px 18px;border-radius:8px;margin-bottom:16px;font-size:17px}
-.alert-success{background:#1a4a2a;border:2px solid #2ecc71;color:#a8f0c0}
-.alert-error{background:#4a1a1a;border:2px solid #e74c3c;color:#f0a8a8}
-.search-box{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-.search-box input{flex:1;min-width:200px;padding:12px 16px;font-size:18px;background:#0f3460;border:2px solid #4a90d9;border-radius:8px;color:#e8e8f0}
-.search-box input:focus{border-color:#7eb8f7;outline:none}
-@media(max-width:600px){body{font-size:18px}.school-grid{grid-template-columns:1fr}.btn{font-size:16px;padding:10px 18px}th,td{padding:10px 12px;font-size:15px}}
+.form-group label{display:block;font-size:16px;margin-bottom:7px;color:var(--muted);font-weight:600}
+.form-group input,.form-group select{width:100%;padding:12px 14px;font-size:16px;background:var(--card2);border:2px solid var(--line);border-radius:10px;color:var(--ink);outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--blue-lt)}
+.form-row{display:flex;gap:12px;flex-wrap:wrap}
+.form-row .form-group{flex:1;min-width:140px}
+/* Table */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:14px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;min-width:480px}
+th{background:var(--card2);color:var(--muted);padding:12px 14px;text-align:left;font-size:15px;font-weight:700}
+td{padding:11px 14px;border-bottom:1px solid var(--line2);font-size:15px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surf)}
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:6px;font-size:13px;font-weight:700}
+.badge-blind{background:#4a1010;color:#ffc8c8}
+.badge-low{background:#123018;color:#a8f0b8}
+.badge-teacher{background:#121e48;color:#b0c8ff}
+.badge-admin{background:#2a1040;color:#d8b8ff}
+/* Alerts */
+.alert{padding:13px 16px;border-radius:10px;margin-bottom:14px;font-size:16px;display:flex;align-items:flex-start;gap:10px}
+.alert-success{background:#112818;border:1.5px solid var(--green);color:#98e8b8}
+.alert-error{background:#2a0e0e;border:1.5px solid var(--danger);color:#f0a0a0}
+/* Search */
+.search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.search-row input{flex:1;min-width:180px;padding:11px 14px;font-size:16px;background:var(--card2);border:2px solid var(--line);border-radius:10px;color:var(--ink);outline:none;transition:border-color .2s}
+.search-row input:focus{border-color:var(--blue-lt)}
+/* Inline confirm */
+.cw-q{display:none;align-items:center;gap:6px;flex-wrap:wrap}
+.cw-asking .cw-trigger{display:none}
+.cw-asking .cw-q{display:inline-flex}
+/* Divider */
+.gap{margin-top:28px}
+/* Analytics */
+.analytic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.analytic-card{background:var(--card2);border:1px solid var(--line2);border-radius:12px;padding:16px}
+.analytic-card .subject{font-size:14px;color:var(--muted);margin-bottom:4px}
+.analytic-card .count{font-size:28px;font-weight:700;color:var(--blue-lt)}
+/* Responsive */
+@media(max-width:700px){
+  .stats-row{grid-template-columns:1fr 1fr}
+  .school-grid{grid-template-columns:1fr}
+  .topbar{padding:0 14px}
+  main{padding:14px}
+  .form-row{flex-direction:column}
+  th,td{padding:9px 10px;font-size:14px}
+}
+@media(max-width:420px){
+  .stats-row{grid-template-columns:1fr}
+  .topbar-sub{display:none}
+}
+/* Confirm JS */
 </style>
+<script>
+function cwAsk(id){document.getElementById(id).classList.add('cw-asking')}
+function cwCancel(id){document.getElementById(id).classList.remove('cw-asking')}
+</script>
 """
 
 
 def _admin_topbar(role: str, school_name: str = "") -> str:
     home = "/admin" if role == "superadmin" else "/teacher"
-    label = "Quản trị tổng" if role == "superadmin" else f"GV — {school_name}"
-    return f"""
+    sub = "Quản trị tổng" if role == "superadmin" else ("Giáo viên" + (f" — {school_name}" if school_name else ""))
+    analytics = '<a href="/teacher/analytics">📊 Báo cáo</a>' if role == "teacher" else ""
+    admin_home = '<a href="/admin">🏫 Trường học</a>' if role == "superadmin" else ""
+    return f"""<a href="#main" class="skip-nav">Chuyển đến nội dung chính</a>
 <div class="topbar" role="banner">
-  <h1 aria-label="EduVision AI">EduVision AI — {label}</h1>
-  <nav class="nav-links" aria-label="Menu chính">
-    <a href="{home}">Trang chủ</a>
-    <a href="/" aria-label="Về trang học tập">Trang học tập</a>
-    <a href="/auth/logout">Đăng xuất</a>
+  <a href="{home}" class="topbar-brand" style="text-decoration:none">
+    <span class="ev">EduVision</span> AI
+    <span class="topbar-sub">{sub}</span>
+  </a>
+  <nav class="topbar-nav" aria-label="Menu quản trị">
+    {admin_home}
+    {analytics}
+    <a href="/">🎓 Trang học tập</a>
+    <a href="/auth/logout" class="logout">↩ Đăng xuất</a>
   </nav>
 </div>"""
 
@@ -2628,34 +2705,37 @@ def _require_admin(request: Request, min_role: str = "teacher") -> dict:
 
 @app.get("/admin/login", response_class=HTMLResponse)
 def admin_login_page(msg: str = "") -> HTMLResponse:
-    alert = f'<div class="alert alert-error" role="alert">{msg}</div>' if msg else ""
+    alert = f'<div class="alert alert-error" role="alert">⚠ {msg}</div>' if msg else ""
     return HTMLResponse(f"""<!DOCTYPE html>
 <html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Đăng nhập — Quản trị EduVision</title>{_admin_css()}</head>
+<title>Đăng nhập — EduVision Quản trị</title>{_admin_css()}</head>
 <body>
-<div class="topbar"><h1>EduVision AI — Đăng nhập quản trị</h1></div>
-<main>
-  <div class="card" style="max-width:480px;margin:40px auto">
-    <h2>Đăng nhập</h2>
-    {alert}
-    <form method="post" action="/admin/login">
-      <div class="form-group">
-        <label for="username">Tên đăng nhập</label>
-        <input type="text" id="username" name="username" autocomplete="username"
-               placeholder="admin hoặc ndc_giaovien" required autofocus
-               aria-label="Tên đăng nhập quản trị">
-      </div>
-      <div class="form-group">
-        <label for="password">Mật khẩu</label>
-        <input type="password" id="password" name="password" autocomplete="current-password"
-               required aria-label="Mật khẩu">
-      </div>
-      <button type="submit" class="btn btn-primary" style="width:100%"
-              aria-label="Đăng nhập vào trang quản trị">Đăng nhập</button>
-    </form>
-    <p style="margin-top:16px;color:#9ab8d8;font-size:16px">
-      Chỉ dành cho giáo viên và quản trị viên.
-      <a href="/" style="color:#7eb8f7">Vào trang học tập →</a>
+<div style="background:var(--surf);padding:0 24px;border-bottom:3px solid var(--red);min-height:60px;display:flex;align-items:center">
+  <span style="font-size:19px;font-weight:700;color:#fff"><span style="color:var(--red)">EduVision</span> AI</span>
+</div>
+<main id="main" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 63px);padding:24px">
+  <div style="width:100%;max-width:440px">
+    <div class="card">
+      <h2 style="margin-top:0;border:none;padding:0;margin-bottom:20px;font-size:24px">🔐 Đăng nhập quản trị</h2>
+      {alert}
+      <form method="post" action="/admin/login" novalidate>
+        <div class="form-group">
+          <label for="username">Tên đăng nhập</label>
+          <input type="text" id="username" name="username" autocomplete="username"
+                 placeholder="admin hoặc ten_giaovien" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">Mật khẩu</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-red btn-block" style="font-size:18px;min-height:54px">
+          Đăng nhập →
+        </button>
+      </form>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:14px;margin-top:14px">
+      Chỉ dành cho giáo viên và quản trị viên. &nbsp;
+      <a href="/">Trang học tập →</a>
     </p>
   </div>
 </main>
@@ -2692,14 +2772,14 @@ def admin_dashboard(request: Request) -> HTMLResponse:
     for s in schools:
         cards_html += f"""
 <div class="school-card" role="region" aria-label="Trường {s['name']}">
-  <h3>{s['name']}</h3>
+  <h3 style="color:#fff;font-size:17px;margin:0 0 4px">{s['name']}</h3>
   <p class="city">📍 {s['city']}</p>
-  <div class="stats">
-    <span class="stat-badge" aria-label="{s['student_count']} học sinh">👨‍🎓 {s['student_count']} HS</span>
-    <span class="stat-badge" aria-label="{s['teacher_count']} giáo viên">👩‍🏫 {s['teacher_count']} GV</span>
+  <div class="stat-badges">
+    <span class="stat-badge">👨‍🎓 {s['student_count']} HS</span>
+    <span class="stat-badge">👩‍🏫 {s['teacher_count']} GV</span>
   </div>
-  <a href="/admin/school/{s['code']}" class="btn btn-primary" style="width:100%"
-     aria-label="Quản lý trường {s['name']}">Quản lý trường →</a>
+  <a href="/admin/school/{s['code']}" class="btn btn-primary btn-block" style="margin-top:auto"
+     aria-label="Quản lý trường {s['name']}">Quản lý →</a>
 </div>"""
 
     return HTMLResponse(f"""<!DOCTYPE html>
@@ -2707,44 +2787,48 @@ def admin_dashboard(request: Request) -> HTMLResponse:
 <title>Quản trị — EduVision AI</title>{_admin_css()}</head>
 <body>
 {_admin_topbar('superadmin')}
-<main>
-  <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
-    <div style="flex:1;text-align:center">
-      <div style="font-size:36px;color:#7eb8f7;font-weight:700">{len(schools)}</div>
-      <div style="color:#9ab8d8">Trường</div>
+<main id="main">
+  <h2 style="margin-top:0">Tổng quan hệ thống</h2>
+  <div class="stats-row">
+    <div class="stat-tile">
+      <div class="num num-blue">{len(schools)}</div>
+      <div class="lbl">🏫 Trường</div>
     </div>
-    <div style="flex:1;text-align:center">
-      <div style="font-size:36px;color:#2ecc71;font-weight:700">{total_students}</div>
-      <div style="color:#9ab8d8">Học sinh</div>
+    <div class="stat-tile">
+      <div class="num num-green">{total_students}</div>
+      <div class="lbl">👨‍🎓 Học sinh</div>
     </div>
-    <div style="flex:1;text-align:center">
-      <div style="font-size:36px;color:#e67e22;font-weight:700">{total_teachers}</div>
-      <div style="color:#9ab8d8">Giáo viên</div>
+    <div class="stat-tile">
+      <div class="num num-orange">{total_teachers}</div>
+      <div class="lbl">👩‍🏫 Giáo viên</div>
     </div>
   </div>
 
   <h2>Danh sách trường</h2>
-  <div class="school-grid" role="list" aria-label="Danh sách trường khiếm thị">
-    {cards_html}
+  <div class="school-grid" role="list">
+    {cards_html if cards_html else '<p style="color:var(--muted)">Chưa có trường nào. Thêm trường bên dưới.</p>'}
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0">Thêm trường mới</h2>
-    <form method="post" action="/admin/add-school" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-      <div class="form-group" style="flex:1;min-width:150px">
-        <label for="school_code">Mã trường (vd: hcm)</label>
-        <input type="text" id="school_code" name="code" required pattern="[a-z]{{2,10}}"
-               placeholder="hcm" aria-label="Mã trường viết thường không dấu">
+    <h2 style="margin-top:0;border:none;padding:0;margin-bottom:16px">➕ Thêm trường mới</h2>
+    <form method="post" action="/admin/add-school">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="school_code">Mã trường</label>
+          <input type="text" id="school_code" name="code" required pattern="[a-z]{{2,10}}"
+                 placeholder="hcm" aria-describedby="code-hint">
+          <small id="code-hint" style="color:var(--muted);font-size:13px">2–10 ký tự thường, không dấu</small>
+        </div>
+        <div class="form-group" style="flex:2">
+          <label for="school_name">Tên trường</label>
+          <input type="text" id="school_name" name="name" required placeholder="Trường Khiếm Thị TP.HCM">
+        </div>
+        <div class="form-group">
+          <label for="school_city">Tỉnh / Thành phố</label>
+          <input type="text" id="school_city" name="city" placeholder="TP.HCM">
+        </div>
       </div>
-      <div class="form-group" style="flex:2;min-width:200px">
-        <label for="school_name">Tên trường</label>
-        <input type="text" id="school_name" name="name" required placeholder="Trường Khiếm Thị TP.HCM">
-      </div>
-      <div class="form-group" style="flex:1;min-width:130px">
-        <label for="school_city">Tỉnh/Thành</label>
-        <input type="text" id="school_city" name="city" placeholder="TP.HCM">
-      </div>
-      <button type="submit" class="btn btn-success" aria-label="Thêm trường mới">Thêm trường</button>
+      <button type="submit" class="btn btn-success">➕ Thêm trường</button>
     </form>
   </div>
 </main>
@@ -2791,7 +2875,22 @@ def admin_school_detail(code: str, request: Request, q: str = "") -> HTMLRespons
                     or q_lower in (s["display_name"] or "").lower()
                     or q_lower in (s["student_id"] or "").lower()]
 
-    # Build teacher rows
+    def _reset_btn(username: str, redirect: str, label: str) -> str:
+        cw_id = f"cw-{username.replace('.','_')}"
+        return f"""<span id="{cw_id}">
+  <button class="btn btn-warning btn-sm cw-trigger" onclick="cwAsk('{cw_id}')"
+          aria-label="Đặt lại mật khẩu {username}">Đặt lại pass</button>
+  <span class="cw-q" role="group" aria-label="Xác nhận đặt lại mật khẩu">
+    <span style="font-size:13px;color:var(--muted)">Đặt lại {label}?</span>
+    <form method="post" action="/admin/reset-password" style="display:inline">
+      <input type="hidden" name="username" value="{username}">
+      <input type="hidden" name="redirect" value="{redirect}">
+      <button type="submit" class="btn btn-danger btn-sm">✓ Xác nhận</button>
+    </form>
+    <button class="btn btn-ghost btn-sm" onclick="cwCancel('{cw_id}')">Huỷ</button>
+  </span>
+</span>"""
+
     teacher_rows = ""
     for t in teachers:
         teacher_rows += f"""
@@ -2799,79 +2898,114 @@ def admin_school_detail(code: str, request: Request, q: str = "") -> HTMLRespons
   <td><strong>{t['username']}</strong></td>
   <td>{t['display_name'] or '—'}</td>
   <td><span class="badge badge-teacher">GV</span></td>
-  <td>
-    <form method="post" action="/admin/reset-password" style="display:inline">
-      <input type="hidden" name="username" value="{t['username']}">
-      <input type="hidden" name="redirect" value="/admin/school/{code}">
-      <button type="submit" class="btn btn-warning btn-sm"
-              aria-label="Đặt lại mật khẩu giáo viên {t['username']}"
-              onclick="return confirm('Đặt lại mật khẩu {t['username']} về mặc định 1?')">Đặt lại pass</button>
-    </form>
-  </td>
+  <td>{_reset_btn(t['username'], f'/admin/school/{code}', t['username'])}</td>
 </tr>"""
 
-    # Build student rows
     student_rows = ""
     for s in students:
-        vision = s.get("vision_status", "")
-        badge = '<span class="badge badge-blind">Mù</span>' if "blind" in (vision or "") else '<span class="badge badge-lowvision">Nhìn kém</span>'
+        vision = s.get("vision_status", "") or ""
+        if "blind" in vision:
+            vbadge = '<span class="badge badge-blind">👁 Mù</span>'
+        else:
+            vbadge = '<span class="badge badge-low">👁 Nhìn kém</span>'
         student_rows += f"""
 <tr>
   <td><strong>{s['username']}</strong></td>
   <td>{s['display_name'] or '—'}</td>
-  <td>{s['student_id'] or '—'}</td>
-  <td>{badge}</td>
-  <td>
-    <form method="post" action="/admin/reset-password" style="display:inline">
-      <input type="hidden" name="username" value="{s['username']}">
-      <input type="hidden" name="redirect" value="/admin/school/{code}?q={q}">
-      <button type="submit" class="btn btn-warning btn-sm"
-              aria-label="Đặt lại mật khẩu {s['username']}"
-              onclick="return confirm('Đặt lại mật khẩu {s['username']} về 1?')">Đặt lại</button>
-    </form>
-  </td>
+  <td>{vbadge}</td>
+  <td>{_reset_btn(s['username'], f'/admin/school/{code}?q={q}', s['username'])}</td>
 </tr>"""
 
-    back = '<a href="/admin" class="btn btn-primary btn-sm">← Danh sách trường</a>' if role == "superadmin" else ""
+    back = '<a href="/admin" class="btn btn-ghost btn-sm">← Tất cả trường</a>' if role == "superadmin" else ""
+    total_stu = len(list_school_users(code, 'student'))
+
+    add_teacher_section = ""
+    if role == "superadmin":
+        add_teacher_section = f"""
+<div class="card gap">
+  <h2 style="margin-top:0;border:none;padding:0;margin-bottom:14px">➕ Thêm giáo viên</h2>
+  <form method="post" action="/admin/add-teacher">
+    <input type="hidden" name="school_code" value="{code}">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tên đăng nhập</label>
+        <input type="text" name="username" required placeholder="{code}_gv2">
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Họ tên</label>
+        <input type="text" name="display_name" required placeholder="Nguyễn Văn A">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-success">➕ Thêm giáo viên</button>
+  </form>
+</div>"""
+
+    add_student_section = f"""
+<div class="card gap">
+  <h2 style="margin-top:0;border:none;padding:0;margin-bottom:14px">➕ Thêm học sinh</h2>
+  <form method="post" action="/admin/add-student">
+    <input type="hidden" name="school_code" value="{code}">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tên đăng nhập</label>
+        <input type="text" name="username" required placeholder="{code}_hs01">
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Họ tên</label>
+        <input type="text" name="display_name" required placeholder="Nguyễn Bảo An">
+      </div>
+      <div class="form-group">
+        <label>Thị lực</label>
+        <select name="vision_status">
+          <option value="lowvision">Nhìn kém</option>
+          <option value="blind">Mù hoàn toàn</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-success">➕ Thêm học sinh</button>
+  </form>
+</div>"""
 
     return HTMLResponse(f"""<!DOCTYPE html>
 <html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{school['name']} — Quản trị EduVision</title>{_admin_css()}</head>
+<title>{school['name']} — EduVision Quản trị</title>{_admin_css()}</head>
 <body>
 {_admin_topbar(role, school['name'])}
-<main>
-  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px">
+<main id="main">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">
     {back}
-    <h2 style="margin:0">📍 {school['name']} — {school['city']}</h2>
+    <h2 style="margin:0;border:none;padding:0">📍 {school['name']} — {school['city']}</h2>
   </div>
 
   <h3>Giáo viên ({len(teachers)} người)</h3>
-  <div class="card" style="padding:0;overflow:auto">
+  <div class="table-wrap">
     <table aria-label="Danh sách giáo viên">
       <thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Vai trò</th><th>Thao tác</th></tr></thead>
-      <tbody>{teacher_rows or '<tr><td colspan="4" style="text-align:center;color:#9ab8d8">Chưa có giáo viên</td></tr>'}</tbody>
+      <tbody>{teacher_rows or '<tr><td colspan="4" class="empty">Chưa có giáo viên</td></tr>'}</tbody>
     </table>
   </div>
 
-  {'<div class="card"><h3 style="margin-top:0">Thêm giáo viên</h3><form method="post" action="/admin/add-teacher" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end"><input type="hidden" name="school_code" value="' + code + '"><div class="form-group" style="flex:1;min-width:160px"><label>Tên đăng nhập GV</label><input type="text" name="username" required placeholder="' + code + '_gv2"></div><div class="form-group" style="flex:2;min-width:180px"><label>Họ tên</label><input type="text" name="display_name" required placeholder="Giáo viên 2"></div><button type="submit" class="btn btn-success">Thêm GV</button></form></div>' if role == "superadmin" else ""}
+  {add_teacher_section}
 
-  <h3>Học sinh ({len(list_school_users(code, 'student'))} người — hiển thị {len(students)})</h3>
-
-  <div class="search-box" role="search" aria-label="Tìm kiếm học sinh">
-    <form method="get" action="/admin/school/{code}" style="display:flex;gap:12px;flex:1;flex-wrap:wrap">
-      <input type="search" name="q" value="{q}" placeholder="Tìm theo tên, mã HS, tên đăng nhập..."
-             aria-label="Tìm học sinh" autocomplete="off">
-      <button type="submit" class="btn btn-primary btn-sm" aria-label="Tìm kiếm">Tìm</button>
-      {'<a href="/admin/school/' + code + '" class="btn btn-sm" style="background:#2a4a7f" aria-label="Xóa bộ lọc">Xem tất cả</a>' if q else ""}
-    </form>
+  <div class="gap">
+    <h3>Học sinh ({total_stu} người{f" — hiển thị {len(students)}" if q else ""})</h3>
+    <div class="search-row" role="search">
+      <form method="get" action="/admin/school/{code}" style="display:contents">
+        <input type="search" name="q" value="{q}" placeholder="Tìm theo tên, tài khoản..."
+               aria-label="Tìm học sinh" autocomplete="off">
+        <button type="submit" class="btn btn-primary btn-sm">Tìm</button>
+        {'<a href="/admin/school/' + code + '" class="btn btn-ghost btn-sm">✕ Xoá lọc</a>' if q else ""}
+      </form>
+    </div>
+    <div class="table-wrap">
+      <table aria-label="Danh sách học sinh">
+        <thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Thị lực</th><th>Thao tác</th></tr></thead>
+        <tbody>{student_rows or '<tr><td colspan="4" class="empty">Không tìm thấy học sinh</td></tr>'}</tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="card" style="padding:0;overflow:auto">
-    <table aria-label="Danh sách học sinh">
-      <thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Mã HS</th><th>Thị lực</th><th>Thao tác</th></tr></thead>
-      <tbody>{student_rows or '<tr><td colspan="5" style="text-align:center;color:#9ab8d8">Không tìm thấy học sinh</td></tr>'}</tbody>
-    </table>
-  </div>
+  {add_student_section}
 </main>
 </body></html>""")
 
@@ -2885,6 +3019,22 @@ async def admin_reset_password(request: Request) -> HTMLResponse:
     if username:
         reset_user_password(username, "1")
     return RedirectResponse(url=redirect_to, status_code=303)
+
+
+@app.post("/admin/add-student")
+async def admin_add_student(request: Request) -> HTMLResponse:
+    _require_admin(request, "teacher")
+    form = await request.form()
+    username = str(form.get("username", "")).strip()
+    school_code = str(form.get("school_code", "")).strip()
+    display_name = str(form.get("display_name", "")).strip()
+    vision_status = str(form.get("vision_status", "lowvision")).strip()
+    if username and school_code:
+        try:
+            create_student_account(username, "1", school_code, display_name or username, vision_status)
+        except ValueError:
+            pass
+    return RedirectResponse(url=f"/admin/school/{school_code}", status_code=303)
 
 
 @app.post("/admin/add-teacher")
@@ -2904,19 +3054,111 @@ async def admin_add_teacher(request: Request) -> HTMLResponse:
 
 @app.get("/teacher", response_class=HTMLResponse)
 def teacher_dashboard(request: Request) -> HTMLResponse:
-    """GV tự login xem trường của mình — redirect thẳng vào school detail."""
+    """GV login → chuyển thẳng vào trang trường của mình."""
     user = _require_admin(request, "teacher")
     all_users = list_users()
     me = next((u for u in all_users if u["username"] == user["username"]), None)
     school_code = me.get("school_code") if me else None
     if not school_code:
-        return HTMLResponse("""<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
-<title>GV — EduVision</title></head><body style="font-family:Arial;font-size:20px;padding:40px">
-<h2 style="color:#e74c3c">Tài khoản chưa được gán vào trường.</h2>
-<p>Liên hệ quản trị viên để được phân công trường.</p>
-<a href="/admin/login">Đăng nhập lại</a>
+        return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lỗi — EduVision</title>{_admin_css()}</head>
+<body>
+{_admin_topbar('teacher')}
+<main id="main" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 63px)">
+  <div class="card" style="max-width:440px;text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+    <h2 style="border:none;padding:0;margin-bottom:12px;color:var(--danger)">Chưa được gán trường</h2>
+    <p style="color:var(--muted);margin-bottom:20px">Tài khoản của bạn chưa được phân công vào trường nào. Liên hệ quản trị viên hệ thống.</p>
+    <a href="/auth/logout" class="btn btn-ghost">↩ Đăng xuất</a>
+  </div>
+</main>
 </body></html>""", status_code=400)
     return RedirectResponse(url=f"/admin/school/{school_code}", status_code=303)
+
+
+@app.get("/teacher/analytics", response_class=HTMLResponse)
+def teacher_analytics_page(request: Request) -> HTMLResponse:
+    """Trang báo cáo thống kê cho giáo viên."""
+    user = _require_admin(request, "teacher")
+    all_users = list_users()
+    me = next((u for u in all_users if u["username"] == user["username"]), None)
+    school_code = me.get("school_code") if me else None
+    school_name = ""
+    if school_code:
+        sch = get_school(school_code)
+        school_name = sch["name"] if sch else school_code
+
+    analytics: Dict[str, Any] = {}
+    try:
+        with db() as conn:
+            rows = conn.execute(
+                "SELECT subject, COUNT(*) as cnt FROM learning_events WHERE 1=1 GROUP BY subject ORDER BY cnt DESC"
+            ).fetchall()
+            analytics["by_subject"] = [{"subject": r[0], "count": r[1]} for r in rows]
+            total = conn.execute("SELECT COUNT(*) FROM learning_events").fetchone()
+            analytics["total_sessions"] = total[0] if total else 0
+            by_stu = conn.execute(
+                "SELECT student_id, COUNT(*) as cnt FROM learning_events GROUP BY student_id ORDER BY cnt DESC LIMIT 20"
+            ).fetchall()
+            analytics["top_students"] = [{"student_id": r[0], "count": r[1]} for r in by_stu]
+    except Exception:
+        analytics = {"total_sessions": 0, "by_subject": [], "top_students": []}
+
+    subject_cards = ""
+    subject_labels = {"math": "Toán học", "science": "Khoa học", "english": "Tiếng Anh",
+                      "geometry": "Hình học", "history": "Lịch sử", "general": "Tổng hợp"}
+    for item in analytics.get("by_subject", []):
+        label = subject_labels.get(item["subject"], item["subject"].title())
+        subject_cards += f"""
+<div class="analytic-card">
+  <div class="subject">{label}</div>
+  <div class="count">{item['count']}</div>
+  <div style="font-size:13px;color:var(--muted2)">lượt học</div>
+</div>"""
+
+    top_student_rows = ""
+    for i, s in enumerate(analytics.get("top_students", []), 1):
+        top_student_rows += f"""
+<tr>
+  <td style="color:var(--muted)">{i}</td>
+  <td><strong>{s['student_id']}</strong></td>
+  <td>{s['count']} lượt</td>
+</tr>"""
+
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Báo cáo — EduVision</title>{_admin_css()}</head>
+<body>
+{_admin_topbar('teacher', school_name)}
+<main id="main">
+  <h2 style="margin-top:0">📊 Báo cáo hoạt động học tập</h2>
+
+  <div class="stats-row">
+    <div class="stat-tile" style="grid-column:1/-1" >
+      <div class="num num-blue">{analytics.get('total_sessions', 0)}</div>
+      <div class="lbl">Tổng lượt hỏi AI</div>
+    </div>
+  </div>
+
+  <h3>Phân bổ theo môn học</h3>
+  <div class="analytic-grid">
+    {subject_cards if subject_cards else '<p style="color:var(--muted)">Chưa có dữ liệu.</p>'}
+  </div>
+
+  <h3>Top học sinh hoạt động</h3>
+  <div class="table-wrap">
+    <table aria-label="Top học sinh theo lượt học">
+      <thead><tr><th>#</th><th>Học sinh</th><th>Số lượt</th></tr></thead>
+      <tbody>{top_student_rows or '<tr><td colspan="3" class="empty">Chưa có dữ liệu</td></tr>'}</tbody>
+    </table>
+  </div>
+
+  <div class="gap" style="margin-top:24px">
+    <a href="/teacher" class="btn btn-ghost btn-sm">← Về trang trường</a>
+  </div>
+</main>
+</body></html>""")
 
 
 # ── PWA ───────────────────────────────────────────────────────────────────────
