@@ -103,7 +103,11 @@ def ask_groq(
         data = resp.json()
         if "choices" in data:
             return data["choices"][0]["message"]["content"].strip()
-        return _fallback(question, subject, language)
+        # Surface the actual Groq error (e.g. invalid_api_key, rate_limit)
+        err_msg = ""
+        if "error" in data:
+            err_msg = data["error"].get("message", str(data["error"]))
+        return _fallback(question, subject, language, error=err_msg or f"HTTP {resp.status_code}")
     except Exception as exc:
         return _fallback(question, subject, language, error=str(exc))
 
