@@ -5,8 +5,16 @@ import os
 from typing import Any, Dict, List, Optional
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama3-70b-8192")
-GROQ_MODEL_FALLBACK = "llama3-8b-8192"
+# Try in order until one works — Groq deprecates models periodically
+GROQ_MODELS_TO_TRY = [
+    os.environ.get("GROQ_MODEL", ""),
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "llama-3.1-8b-instant",
+    "gemma2-9b-it",
+    "mixtral-8x7b-32768",
+]
+GROQ_MODELS_TO_TRY = [m for m in GROQ_MODELS_TO_TRY if m]
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 BASE_SYSTEM_PROMPT = """You are EduVision AI — a warm, patient tutor for visually impaired and low-vision students.
@@ -104,14 +112,13 @@ def ask_groq(
                 timeout=30,
             ).json()
 
-        data = _call(GROQ_MODEL)
-        if "choices" not in data:
-            # Fallback to smaller model
-            data = _call(GROQ_MODEL_FALLBACK)
-        if "choices" in data:
-            return data["choices"][0]["message"]["content"].strip()
-        err_msg = data.get("error", {}).get("message", str(data)) if "error" in data else f"No choices in response"
-        return _fallback(question, subject, language, error=err_msg)
+        last_err = "No models available"
+        for model in GROQ_MODELS_TO_TRY:
+            data = _call(model)
+            if "choices" in data:
+                return data["choices"][0]["message"]["content"].strip()
+            last_err = data.get("error", {}).get("message", str(data)) if "error" in data else "No choices"
+        return _fallback(question, subject, language, error=last_err)
     except Exception as exc:
         return _fallback(question, subject, language, error=str(exc))
 
