@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from pydantic import BaseModel, Field
 from app.auth import (
     init_auth_db, login as auth_login, logout as auth_logout,
-    get_user_by_token, create_student_account, list_users,
+    get_user_by_token, create_student_account, list_users, change_password,
 )
 from app.braille import text_to_unicode_braille, text_to_brf, vietnamese_note
 
@@ -703,6 +703,42 @@ def web_demo() -> str:
     @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
     @media(max-width:560px){body{font-size:16px}.topbar{padding:10px 14px;gap:8px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.lang-toggle button{padding:8px 12px;font-size:14px;min-width:50px}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
     @media(max-width:360px){.brand{font-size:15px}.lang-toggle button{padding:7px 10px;min-width:46px}.status{grid-template-columns:1fr}}
+    /* ── LOW VISION MODE ── */
+    body.lv-mode{font-size:1.2em;line-height:1.7;letter-spacing:0.01em}
+    body.lv-mode pre{font-size:1.1em;line-height:1.8}
+    body.lv-mode input,body.lv-mode select,body.lv-mode textarea{font-size:1.1em;min-height:48px}
+    body.lv-mode .btn{font-size:1.05em;min-height:52px}
+    body.lv-dark{background:#111 !important;color:#f0f0f0}
+    body.lv-dark .card{background:#1e1e1e;border-color:#444}
+    body.lv-dark pre{background:#0d0d0d;color:#e5e5e5;border-color:#555}
+    body.lv-dark .tab-nav{background:#111;border-top-color:#444}
+    body.lv-dark .settings-panel{background:#1a1a1a;color:#f0f0f0;border-left-color:#444}
+    body.lv-dark .settings-panel h3,body.lv-dark .settings-panel h4{color:#93c5fd}
+    body.lv-dark .speed-btn{background:#222;color:#93c5fd;border-color:#555}
+    body.lv-dark .speed-btn.active{background:#1d4ed8;color:#fff}
+    body.lv-dark .sentence-nav button{background:#222;color:#93c5fd;border-color:#555}
+    .lv-highlight{background:#ffff00;color:#000;border-radius:2px;padding:0 1px}
+    body.lv-dark .lv-highlight{background:#00ffff;color:#000}
+    /* ── SETTINGS PANEL ── */
+    .settings-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:min(340px,92vw);background:#fff;border-left:2px solid var(--line);z-index:400;padding:24px 20px;overflow-y:auto;box-shadow:-6px 0 24px rgba(0,0,0,.15)}
+    .settings-panel.open{display:block}
+    .settings-close{position:absolute;top:12px;right:14px;border:0;background:transparent;font-size:28px;cursor:pointer;color:var(--muted);line-height:1;padding:4px 8px;border-radius:6px}
+    .settings-close:hover{background:var(--soft);color:var(--ink)}
+    .settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);gap:12px}
+    .toggle-switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
+    .toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+    .toggle-slider{position:absolute;inset:0;background:#d1d5db;border-radius:26px;cursor:pointer;transition:.25s}
+    .toggle-slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+    input:checked + .toggle-slider{background:var(--blue)}
+    input:checked + .toggle-slider::before{transform:translateX(20px)}
+    .speed-bar{display:flex;gap:6px;flex-wrap:wrap}
+    .speed-btn{padding:6px 11px;border:1.5px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);min-height:38px;transition:background .15s,color .15s}
+    .speed-btn:hover{background:var(--soft)}
+    .speed-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .sentence-nav{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .sentence-nav button{min-height:40px;padding:6px 14px;border:1.5px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:700;color:var(--blue);transition:background .15s}
+    .sentence-nav button:hover{background:var(--soft)}
+    .sentence-nav button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     /* ── TAB NAVIGATION (mobile) ── */
     .tab-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--line);z-index:200;padding-bottom:env(safe-area-inset-bottom)}
     .tab-nav>.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;border:0;background:transparent;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px;-webkit-tap-highlight-color:transparent;transition:color 0.12s;line-height:1.2}
@@ -732,10 +768,13 @@ def web_demo() -> str:
     <div class="brand">
       <div>EduVision AI</div>
     </div>
-    <!-- LANGUAGE TOGGLE -->
-    <div class="lang-toggle" role="group" aria-label="Chọn ngôn ngữ / Select language">
-      <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Chuyển sang Tiếng Việt">VI</button>
-      <button id="btn-en" onclick="setLang('en')" aria-pressed="false" aria-label="Switch to English">EN</button>
+    <!-- HEADER ACTIONS: settings + language -->
+    <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+      <button id="btn-settings" onclick="toggleSettings()" aria-label="Cài đặt trợ năng" title="Cài đặt" style="background:#f3f4f6;border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;min-height:42px;line-height:1;color:var(--ink)">⚙</button>
+      <div class="lang-toggle" role="group" aria-label="Chọn ngôn ngữ / Select language">
+        <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Chuyển sang Tiếng Việt">VI</button>
+        <button id="btn-en" onclick="setLang('en')" aria-pressed="false" aria-label="Switch to English">EN</button>
+      </div>
     </div>
   </div>
   <div class="hero-wrap">
@@ -852,6 +891,11 @@ def web_demo() -> str:
           style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
         <pre id="result" role="log" aria-live="polite" aria-atomic="false"
           aria-label="Kết quả từ AI — dùng phím mũi tên để đọc">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.</pre>
+        <div class="sentence-nav" id="sentence-nav" style="display:none" role="navigation" aria-label="Điều hướng câu">
+          <button onclick="prevSentence()" aria-label="Câu trước">⬅ Trước</button>
+          <button onclick="repeatSentence()" aria-label="Lặp lại câu này">🔄 Lặp</button>
+          <button onclick="nextSentence()" aria-label="Câu tiếp theo">Tiếp ➡</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1015,7 +1059,7 @@ function speakText(text, lang) {
   const clean = text.replace(/[#*`{}"]/g, '').replace(/\\n{2,}/g, ' ').slice(0, 3000);
   const utt = new SpeechSynthesisUtterance(clean);
   utt.lang = UI[lang].ttsLang;
-  utt.rate = lang === 'vi' ? 0.88 : 0.92;
+  utt.rate = (_ttsSpeed || 1.0) * (lang === 'vi' ? 0.88 : 0.92);
   utt.pitch = 1.0;
   // Pick best matching voice
   const voices = window.speechSynthesis.getVoices();
@@ -1121,7 +1165,7 @@ function setResult(data) {
     toSpeak = data.description + '. ' + (LANG==='vi' ? 'Nội dung: ' : 'Content: ') + data.ocr_text.slice(0, 600);
   } else if (data && data.ocr_text) toSpeak = data.ocr_text.slice(0, 800);
   else if (typeof data === 'string') toSpeak = data;
-  if (toSpeak) speakText(toSpeak, LANG);
+  if (toSpeak) { loadSentences(toSpeak); speakText(toSpeak, LANG); }
   // Mobile: auto-switch to result tab
   if (window.matchMedia('(max-width:900px)').matches) showTab('result');
   // Chuyển focus về vùng kết quả để screen reader tự đọc
@@ -1348,7 +1392,219 @@ async function describeImage() {
   } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
+
+// ── SETTINGS & LOW VISION MODE ────────────────────────────────────────────────
+var _ttsSpeed = parseFloat(localStorage.getItem('ev_speed') || '1.0');
+var _lvMode = localStorage.getItem('ev_lv') === '1';
+var _darkMode = localStorage.getItem('ev_dark') === '1';
+
+function toggleSettings() {
+  var p = document.getElementById('settings-panel');
+  if (!p) return;
+  var isOpen = p.classList.toggle('open');
+  if (isOpen) {
+    var lvCk = document.getElementById('lv-toggle-check');
+    var darkCk = document.getElementById('dark-toggle-check');
+    if (lvCk) lvCk.checked = _lvMode;
+    if (darkCk) darkCk.checked = _darkMode;
+    _syncSpeedBtns();
+  }
+}
+
+function _syncSpeedBtns() {
+  document.querySelectorAll('#speed-bar .speed-btn').forEach(function(b) {
+    b.classList.toggle('active', parseFloat(b.dataset.rate) === _ttsSpeed);
+  });
+}
+
+function toggleLowVision(on) {
+  _lvMode = on;
+  localStorage.setItem('ev_lv', on ? '1' : '0');
+  document.body.classList.toggle('lv-mode', on);
+  if (!on) {
+    _darkMode = false;
+    localStorage.setItem('ev_dark', '0');
+    document.body.classList.remove('lv-dark');
+    var ck = document.getElementById('dark-toggle-check');
+    if (ck) ck.checked = false;
+  }
+}
+
+function toggleDarkMode(on) {
+  _darkMode = on;
+  localStorage.setItem('ev_dark', on ? '1' : '0');
+  document.body.classList.toggle('lv-dark', on);
+  if (on && !_lvMode) {
+    _lvMode = true;
+    localStorage.setItem('ev_lv', '1');
+    document.body.classList.add('lv-mode');
+    var ck = document.getElementById('lv-toggle-check');
+    if (ck) ck.checked = true;
+  }
+}
+
+function setSpeed(s) {
+  _ttsSpeed = s;
+  localStorage.setItem('ev_speed', String(s));
+  _syncSpeedBtns();
+  announce(LANG === 'vi' ? ('Tốc độ đọc: ' + s + 'x') : ('Speech rate: ' + s + 'x'));
+}
+
+function setFontSize(px) {
+  document.body.style.fontSize = px + 'px';
+  localStorage.setItem('ev_fontsize', String(px));
+}
+
+// ── SENTENCE NAVIGATION ───────────────────────────────────────────────────────
+var _sentences = [];
+var _sentIdx = 0;
+
+function splitSentences(text) {
+  var raw = text.split(/(?<=[.!?。…])\s+|\n{2,}/);
+  var parts = raw.map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 5; });
+  return parts.length ? parts : [text];
+}
+
+function loadSentences(text) {
+  _sentences = splitSentences(text);
+  _sentIdx = 0;
+  var nav = document.getElementById('sentence-nav');
+  if (nav) nav.style.display = _sentences.length > 1 ? 'flex' : 'none';
+}
+
+function speakSentence(idx) {
+  if (!_sentences.length) return;
+  _sentIdx = Math.max(0, Math.min(idx, _sentences.length - 1));
+  announce((_sentIdx + 1) + '/' + _sentences.length);
+  speakText(_sentences[_sentIdx], LANG);
+}
+
+function prevSentence() { speakSentence(_sentIdx - 1); }
+function nextSentence() { speakSentence(_sentIdx + 1); }
+function repeatSentence() { speakSentence(_sentIdx); }
+
+document.addEventListener('keydown', function(e) {
+  if (e.altKey && e.key === 'ArrowLeft' && !e.ctrlKey) { e.preventDefault(); prevSentence(); }
+  if (e.altKey && e.key === 'ArrowRight' && !e.ctrlKey) { e.preventDefault(); nextSentence(); }
+  if (e.ctrlKey && e.key === ' ') {
+    e.preventDefault();
+    if (window.eduvisionIsSpeaking) stopSpeech(false);
+    else if (_sentences.length) speakSentence(_sentIdx);
+    else speakResult();
+  }
+  if (e.key === 'Escape') {
+    var p = document.getElementById('settings-panel');
+    if (p && p.classList.contains('open')) p.classList.remove('open');
+  }
+});
+
+// ── CHANGE PASSWORD ───────────────────────────────────────────────────────────
+async function changePassword() {
+  var username = (document.getElementById('cp-username').value || '').trim();
+  var oldPwd = document.getElementById('cp-old').value;
+  var newPwd = document.getElementById('cp-new').value;
+  var msg = document.getElementById('cp-msg');
+  msg.textContent = '';
+  if (!username || !oldPwd || !newPwd) {
+    msg.textContent = 'Vui lòng điền đủ 3 trường.';
+    msg.style.color = '#ef4444';
+    return;
+  }
+  try {
+    var r = await fetch('/auth/change-password', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: username, old_password: oldPwd, new_password: newPwd})
+    });
+    var j = await r.json();
+    if (r.ok) {
+      msg.textContent = '✅ Đổi mật khẩu thành công!';
+      msg.style.color = '#16a34a';
+      document.getElementById('cp-old').value = '';
+      document.getElementById('cp-new').value = '';
+    } else {
+      msg.textContent = '❌ ' + (j.detail || 'Lỗi không xác định');
+      msg.style.color = '#ef4444';
+    }
+  } catch(err) {
+    msg.textContent = '❌ Lỗi kết nối: ' + err.message;
+    msg.style.color = '#ef4444';
+  }
+}
+
+// ── APPLY SAVED PREFERENCES ON PAGE LOAD ─────────────────────────────────────
+(function initPrefs() {
+  if (_lvMode) document.body.classList.add('lv-mode');
+  if (_darkMode) document.body.classList.add('lv-dark');
+  var fs = localStorage.getItem('ev_fontsize');
+  if (fs) document.body.style.fontSize = fs + 'px';
+})();
 </script>
+
+<!-- SETTINGS PANEL (slide-in từ phải) -->
+<div class="settings-panel" id="settings-panel" role="dialog" aria-label="Cài đặt trợ năng" aria-modal="true">
+  <button class="settings-close" onclick="toggleSettings()" aria-label="Đóng cài đặt">×</button>
+  <h3 style="margin:0 0 16px;color:var(--blue)">⚙ Cài đặt trợ năng</h3>
+
+  <div class="settings-row">
+    <label for="lv-toggle-check" style="font-weight:600;cursor:pointer;flex:1">👁 Chế độ Low Vision</label>
+    <label class="toggle-switch">
+      <input type="checkbox" id="lv-toggle-check" onchange="toggleLowVision(this.checked)">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="settings-row">
+    <label for="dark-toggle-check" style="font-weight:600;cursor:pointer;flex:1">🌙 Nền tối (High Contrast)</label>
+    <label class="toggle-switch">
+      <input type="checkbox" id="dark-toggle-check" onchange="toggleDarkMode(this.checked)">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+    <span style="font-weight:600">🔊 Tốc độ đọc</span>
+    <div class="speed-bar" id="speed-bar">
+      <button class="speed-btn" data-rate="0.5" onclick="setSpeed(0.5)">0.5×</button>
+      <button class="speed-btn" data-rate="0.75" onclick="setSpeed(0.75)">0.75×</button>
+      <button class="speed-btn active" data-rate="1" onclick="setSpeed(1.0)">1×</button>
+      <button class="speed-btn" data-rate="1.5" onclick="setSpeed(1.5)">1.5×</button>
+      <button class="speed-btn" data-rate="2" onclick="setSpeed(2.0)">2×</button>
+      <button class="speed-btn" data-rate="3" onclick="setSpeed(3.0)">3×</button>
+    </div>
+  </div>
+
+  <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+    <span style="font-weight:600">🔠 Cỡ chữ</span>
+    <div style="display:flex;gap:8px">
+      <button class="speed-btn" onclick="setFontSize(14)" style="font-size:11px" title="Nhỏ">A−</button>
+      <button class="speed-btn" onclick="setFontSize(17)" title="Vừa">A</button>
+      <button class="speed-btn" onclick="setFontSize(21)" style="font-size:18px" title="Lớn">A+</button>
+    </div>
+  </div>
+
+  <div style="margin-top:20px">
+    <h4 style="margin:0 0 12px;color:var(--blue)">🔑 Đổi mật khẩu</h4>
+    <div style="display:grid;gap:8px">
+      <input type="text" id="cp-username" placeholder="Tên đăng nhập" autocomplete="username"
+        aria-label="Tên đăng nhập" style="padding:10px;border:1.5px solid var(--line);border-radius:8px;font-size:15px;width:100%;box-sizing:border-box">
+      <input type="password" id="cp-old" placeholder="Mật khẩu hiện tại" autocomplete="current-password"
+        aria-label="Mật khẩu hiện tại" style="padding:10px;border:1.5px solid var(--line);border-radius:8px;font-size:15px;width:100%;box-sizing:border-box">
+      <input type="password" id="cp-new" placeholder="Mật khẩu mới" autocomplete="new-password"
+        aria-label="Mật khẩu mới" style="padding:10px;border:1.5px solid var(--line);border-radius:8px;font-size:15px;width:100%;box-sizing:border-box">
+      <button onclick="changePassword()"
+        style="background:var(--blue);color:#fff;border:0;border-radius:8px;padding:12px;font-weight:700;cursor:pointer;font-size:15px;min-height:44px">Đổi mật khẩu</button>
+      <p id="cp-msg" style="margin:0;font-weight:600;font-size:14px;min-height:20px"></p>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;padding:12px;background:var(--soft);border-radius:8px">
+    <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.6"><strong>⌨ Phím tắt:</strong><br>
+    Alt+← câu trước · Alt+→ câu tiếp<br>
+    Ctrl+Space tạm dừng / phát tiếp<br>
+    Esc đóng bảng cài đặt</p>
+  </div>
+</div>
 
 <nav class="tab-nav" role="navigation" aria-label="Điều hướng chính">
   <button class="tab-btn active" data-tab="ask" onclick="showTab('ask')" aria-pressed="true"><span class="t-icon">🤖</span>Hỏi AI</button>
@@ -1704,6 +1960,22 @@ def me(request: Request) -> Dict[str, Any]:
     if not user:
         raise HTTPException(status_code=401, detail="Chưa đăng nhập")
     return user
+
+
+class ChangePasswordRequest(BaseModel):
+    username: str
+    old_password: str
+    new_password: str
+
+
+@app.put("/auth/change-password")
+def auth_change_password(payload: ChangePasswordRequest) -> Dict[str, Any]:
+    if not payload.new_password:
+        raise HTTPException(status_code=400, detail="Mật khẩu mới không được để trống")
+    ok = change_password(payload.username, payload.old_password, payload.new_password)
+    if not ok:
+        raise HTTPException(status_code=401, detail="Tên đăng nhập hoặc mật khẩu hiện tại không đúng")
+    return {"status": "ok", "message": "Đổi mật khẩu thành công"}
 
 
 ## ── TEACHER DASHBOARD ────────────────────────────────────────────────────────

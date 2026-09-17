@@ -134,3 +134,18 @@ def list_users() -> list:
             "SELECT id, username, role, student_id, display_name, created_at FROM users ORDER BY created_at"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def change_password(username: str, old_password: str, new_password: str) -> bool:
+    """Đổi mật khẩu. Trả về True nếu thành công, False nếu username không tồn tại hoặc mật khẩu cũ sai."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT id, password_hash FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        if not row or not verify_password(old_password, row["password_hash"]):
+            return False
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (hash_password(new_password), row["id"]),
+        )
+    return True
