@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import os
-from typing import List
+from typing import Any, Dict, List, Optional
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-SYSTEM_PROMPT = """You are EduVision AI — a warm, patient tutor for visually impaired and low-vision students.
+BASE_SYSTEM_PROMPT = """You are EduVision AI — a warm, patient tutor for visually impaired and low-vision students.
 
 Rules (always follow):
 - NEVER say "look at the figure", "as shown in the image", "you can see". Replace with tactile/verbal descriptions.
@@ -23,12 +23,44 @@ Rules (always follow):
 Language: reply in the same language as the student's question (Vietnamese if asked in Vietnamese, English if in English)."""
 
 
+def _build_system_prompt(profile: Optional[Dict[str, Any]] = None) -> str:
+    """Xây system prompt cá nhân hoá theo hồ sơ học sinh."""
+    if not profile or not profile.get("name"):
+        return BASE_SYSTEM_PROMPT
+
+    vision = profile.get("vision_status", "")
+    name = profile.get("name", "học sinh")
+    grade = profile.get("grade", "")
+    weaknesses = ", ".join(profile.get("weaknesses", [])) or "chưa xác định"
+    strengths = ", ".join(profile.get("strengths", [])) or "chưa xác định"
+    math_level = profile.get("math_level", "")
+    english_level = profile.get("english_level", "")
+    goal = profile.get("learning_goal", "")
+
+    profile_section = f"""
+--- THÔNG TIN HỌC SINH ---
+Tên: {name} | Lớp: {grade} | Thị lực: {vision}
+Toán: {math_level} | Tiếng Anh trình độ: {english_level}
+Điểm yếu: {weaknesses}
+Điểm mạnh: {strengths}
+Mục tiêu học: {goal}
+--- KẾT THÚC HỒ SƠ ---
+
+Điều chỉnh giải thích phù hợp với thị lực "{vision}" của {name}:
+- Nếu mù hoàn toàn (blind): chỉ dùng mô tả xúc giác và âm thanh, không dùng màu sắc.
+- Nếu thị lực kém (low vision): có thể dùng tương phản cao, chữ lớn, hạn chế mô tả hình ảnh phức tạp.
+- Điều chỉnh độ khó theo lớp và điểm yếu đã biết của học sinh."""
+
+    return BASE_SYSTEM_PROMPT + profile_section
+
+
 def ask_groq(
     question: str,
     subject: str,
     grade: str,
     context_chunks: List[str],
     language: str = "vi",
+    profile: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Call Groq Llama 3.3 70B and return the answer text."""
     if not GROQ_API_KEY:
@@ -37,12 +69,17 @@ def ask_groq(
     context_text = "\n".join(f"- {c}" for c in context_chunks[:3]) if context_chunks else ""
     lang_hint = "Trả lời bằng tiếng Việt." if language == "vi" else "Reply in English."
 
+    student_name = profile.get("name", "") if profile else ""
+    name_hint = f"Xưng hô với học sinh bằng tên: {student_name}. " if student_name else ""
+
     user_msg = (
-        f"{lang_hint}\n"
+        f"{lang_hint} {name_hint}\n"
         f"Học sinh lớp: {grade}. Môn: {subject}.\n"
         + (f"Kiến thức liên quan:\n{context_text}\n\n" if context_text else "")
         + f"Câu hỏi: {question}"
     )
+
+    system_prompt = _build_system_prompt(profile)
 
     try:
         import httpx
@@ -55,10 +92,10 @@ def ask_groq(
             json={
                 "model": GROQ_MODEL,
                 "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg},
                 ],
-                "max_tokens": 800,
+                "max_tokens": 900,
                 "temperature": 0.7,
             },
             timeout=30,

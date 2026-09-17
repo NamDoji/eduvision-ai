@@ -813,7 +813,10 @@ def web_demo() -> str:
     <div class="result-panel">
       <div class="card">
         <h2 id="result-title">📋 Kết quả</h2>
-        <pre id="result" aria-live="polite" aria-label="Kết quả từ AI">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.</pre>
+        <div id="sr-status" aria-live="assertive" aria-atomic="true"
+          style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
+        <pre id="result" role="log" aria-live="polite" aria-atomic="false"
+          aria-label="Kết quả từ AI — dùng phím mũi tên để đọc">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.</pre>
       </div>
     </div>
   </div>
@@ -997,7 +1000,10 @@ function speakText(text, lang) {
 }
 
 // ── LOADING HELPERS ─────────────────────────────────────────────────────────
-function showLoading() { document.getElementById('loading-bar').style.display='block'; }
+function showLoading() {
+  document.getElementById('loading-bar').style.display='block';
+  announce(LANG === 'vi' ? 'Đang xử lý, vui lòng chờ...' : 'Processing, please wait...');
+}
 function hideLoading() { document.getElementById('loading-bar').style.display='none'; }
 
 function displayError(message) {
@@ -1053,9 +1059,19 @@ async function readResponse(res) {
   return data;
 }
 
+function announce(msg) {
+  // Thông báo cho screen reader (NVDA/VoiceOver) qua vùng aria-live assertive
+  const el = document.getElementById('sr-status');
+  if (!el) return;
+  el.textContent = '';
+  requestAnimationFrame(() => { el.textContent = msg; });
+}
+
 function setResult(data) {
   let text = formatResult(data);
   document.getElementById('result').textContent = text;
+  // Thông báo ngắn cho screen reader biết có kết quả mới
+  announce(LANG === 'vi' ? 'Đã nhận kết quả từ AI. Đọc vùng kết quả để xem nội dung.' : 'AI response received. Read the result area.');
   // Auto-speak: answer > OCR description+text > plain string
   let toSpeak = '';
   if (data && data.answer_text) toSpeak = data.answer_text;
@@ -1066,6 +1082,11 @@ function setResult(data) {
   } else if (data && data.ocr_text) toSpeak = data.ocr_text.slice(0, 800);
   else if (typeof data === 'string') toSpeak = data;
   if (toSpeak) speakText(toSpeak, LANG);
+  // Chuyển focus về vùng kết quả để screen reader tự đọc
+  setTimeout(() => {
+    const el = document.getElementById('result');
+    if (el) { el.setAttribute('tabindex', '-1'); el.focus(); }
+  }, 200);
 }
 
 // ── DEMO PROMPTS ────────────────────────────────────────────────────────────
@@ -1411,6 +1432,7 @@ def ask(payload: AskRequest) -> AskResponse:
             grade=grade,
             context_chunks=context,
             language=payload.language,
+            profile=profile or None,
         )
     elif subject == "geometry":
         answer = accessible_geometry_answer(payload.question, profile, context, payload.language)

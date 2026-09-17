@@ -12,3 +12,4 @@ httpx==0.28.1
 requests==2.32.3
 gtts==2.5.3
 passlib[bcrypt]==1.7.4
+louis; sys_platform != "win32"
