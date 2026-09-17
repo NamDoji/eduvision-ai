@@ -832,7 +832,7 @@ def web_demo() -> str:
           <button class="btn" onclick="askTutor()" id="btn-ask" aria-label="Gửi câu hỏi tới AI">🎓 Hỏi AI</button>
           <button class="btn" id="btn-mic" onclick="toggleMic()" aria-label="Nhập bằng giọng nói" style="background:#1565C0;" title="Nhập câu hỏi bằng giọng nói">🎙 Giọng nói</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak">🔊 Đọc to kết quả</button>
-          <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép Braille">⠿ Braille</button>
+          <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép chữ Braille vào clipboard" title="Chữ nổi Braille — dán vào phần mềm đọc chữ nổi hoặc thiết bị Braille display">⠿ Chữ nổi Braille</button>
         </div>
         <!-- Demo: hàng riêng, nhỏ hơn — dùng thử, không phải hành động chính -->
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
@@ -1367,12 +1367,42 @@ async function fetchAndShowBraille(text) {
 }
 
 function copyBraille() {
-  if (!_lastBraille) return;
-  navigator.clipboard.writeText(_lastBraille).then(() => {
-    const b = document.getElementById('btn-braille');
-    b.textContent = '✅ Đã sao chép!';
-    setTimeout(() => { b.textContent = '⠿ Braille'; }, 2000);
-  });
+  if (!_lastBraille) { showToast('Chưa có nội dung Braille. Hỏi AI trước.', 'warn'); return; }
+  var doToast = function() {
+    showToast('✅ Đã sao chép chữ nổi Braille vào clipboard!\n Dán vào phần mềm đọc Braille hoặc thiết bị chữ nổi.', 'ok', 5000);
+    var b = document.getElementById('btn-braille');
+    if (b) { b.textContent = '✅ Đã sao chép!'; setTimeout(function(){ b.innerHTML = '⠿ Chữ nổi Braille'; }, 3000); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(_lastBraille).then(doToast).catch(function() {
+      // Fallback: textarea + execCommand
+      var ta = document.createElement('textarea');
+      ta.value = _lastBraille; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); doToast(); } catch(e) {}
+      document.body.removeChild(ta);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = _lastBraille; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); doToast(); } catch(e) { showToast('Trình duyệt không hỗ trợ copy tự động. Vui lòng copy thủ công.', 'warn'); }
+    document.body.removeChild(ta);
+  }
+}
+
+function showToast(msg, type, duration) {
+  var existing = document.getElementById('ev-toast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.id = 'ev-toast';
+  t.setAttribute('role', 'alert');
+  t.setAttribute('aria-live', 'assertive');
+  var bg = type === 'ok' ? '#16a34a' : type === 'warn' ? '#d97706' : '#dc2626';
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:'+bg+';color:#fff;padding:14px 20px;border-radius:12px;font-size:15px;font-weight:700;z-index:9999;max-width:90vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.25);line-height:1.5;white-space:pre-line';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ if(t.parentNode) t.remove(); }, duration || 3500);
 }
 
 // ── TAB NAVIGATION (mobile) ──────────────────────────────────────────────────
