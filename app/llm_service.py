@@ -79,7 +79,7 @@ def ask_groq(
         return _fallback(question, subject, language)
 
     context_text = "\n".join(f"- {c}" for c in context_chunks[:3]) if context_chunks else ""
-    lang_hint = "Trả lời bằng tiếng Việt." if language == "vi" else "Reply in English."
+    lang_hint = "QUAN TRỌNG: Toàn bộ câu trả lời phải bằng tiếng Việt, kể cả thuật ngữ kỹ thuật (dịch hoặc giữ nguyên kèm giải thích)." if language == "vi" else "Reply entirely in English."
 
     student_name = profile.get("name", "") if profile else ""
     name_hint = f"Xưng hô với học sinh bằng tên: {student_name}. " if student_name else ""
