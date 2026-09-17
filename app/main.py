@@ -1076,10 +1076,8 @@ function setLang(lang) {
   localStorage.setItem('ev_lang', lang);
   const T = UI[lang];
   // Toggle button states
-  document.getElementById('btn-vi').classList.toggle('active', lang === 'vi');
-  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-  document.getElementById('btn-vi').setAttribute('aria-pressed', lang === 'vi');
-  document.getElementById('btn-en').setAttribute('aria-pressed', lang === 'en');
+  var _bvi = document.getElementById('btn-vi'); if (_bvi) { _bvi.classList.toggle('active', lang === 'vi'); _bvi.setAttribute('aria-pressed', String(lang === 'vi')); }
+  var _ben = document.getElementById('btn-en'); if (_ben) { _ben.classList.toggle('active', lang === 'en'); _ben.setAttribute('aria-pressed', String(lang === 'en')); }
   document.getElementById('html-root').lang = T.htmlLang;
   // UI text
   var _ht = document.getElementById('hero-title'); if (_ht) _ht.textContent = T.heroTitle;
@@ -1427,8 +1425,6 @@ function useSuggestion(el) {
   document.getElementById('question').value = el.textContent;
   document.getElementById('question').focus();
 }
-// Khởi tạo gợi ý ban đầu
-updateSuggestions('geometry');
 
 // ── HISTORY ──────────────────────────────────────────────────────────────────
 var _lastQuestion = '';
@@ -1474,7 +1470,6 @@ function repeatLast() {
   document.getElementById('question').value = _lastQuestion;
   askTutor();
 }
-renderHistory();
 
 // ── HIGH CONTRAST MODE ───────────────────────────────────────────────────────
 var _hcMode = localStorage.getItem('ev_hc') === '1';
@@ -1482,11 +1477,6 @@ function toggleHC(on) {
   _hcMode = on;
   document.body.classList.toggle('lv-hc', on);
   localStorage.setItem('ev_hc', on ? '1' : '0');
-}
-if (_hcMode) {
-  document.body.classList.add('lv-hc');
-  var hcEl = document.getElementById('hc-toggle-check');
-  if (hcEl) hcEl.checked = true;
 }
 
 // ── LOADING WITH AUDIO FEEDBACK ───────────────────────────────────────────────
@@ -1565,9 +1555,18 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 // Ensure voices are loaded before first use
 window.speechSynthesis && window.speechSynthesis.getVoices();
 window.speechSynthesis && window.speechSynthesis.addEventListener('voiceschanged', () => {});
-// Apply saved language on load
-setLang(LANG);
-refreshStatus();
+// Init after full DOM is ready (settings panel btn-vi/btn-en are after </script>)
+document.addEventListener('DOMContentLoaded', function() {
+  setLang(LANG);
+  refreshStatus();
+  updateSuggestions(_currentSubject);
+  renderHistory();
+  if (_hcMode) {
+    document.body.classList.add('lv-hc');
+    var hcEl = document.getElementById('hc-toggle-check');
+    if (hcEl) hcEl.checked = true;
+  }
+});
 
 // ── VOICE INPUT (mic) ──────────────────────────────────────────────────────
 let _mediaRec = null, _micChunks = [];
