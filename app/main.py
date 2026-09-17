@@ -735,6 +735,16 @@ def web_demo() -> HTMLResponse:
     body.lv-dark .sentence-nav button{background:#222;color:#93c5fd;border-color:#555}
     .lv-highlight{background:#ffff00;color:#000;border-radius:2px;padding:0 1px}
     body.lv-dark .lv-highlight{background:#00ffff;color:#000}
+    /* ── TTS WORD HIGHLIGHT ── */
+    .tts-word{border-radius:3px;transition:background .1s}
+    .tts-word.tts-active{background:#ffe066;color:#000;box-shadow:0 0 0 2px #f59e0b}
+    body.lv-dark .tts-word.tts-active{background:#00e5ff;color:#000;box-shadow:0 0 0 2px #00b8d9}
+    body.lv-hc .tts-word.tts-active{background:#ff0 !important;color:#000 !important;outline:2px solid #fff}
+    /* ── READING RULER ── */
+    #reading-ruler{display:none;position:fixed;left:0;right:0;height:2.4em;background:rgba(255,230,0,.28);border-top:2px solid rgba(255,200,0,.7);border-bottom:2px solid rgba(255,200,0,.7);pointer-events:none;z-index:9990;transition:top .05s linear}
+    body.lv-dark #reading-ruler{background:rgba(0,229,255,.18);border-color:rgba(0,229,255,.6)}
+    body.lv-hc #reading-ruler{background:rgba(255,255,0,.35);border-color:#ff0}
+    body.ruler-on #reading-ruler{display:block}
     /* ── HIGH CONTRAST MODE (WCAG AAA) ── */
     body.lv-hc{background:#000 !important;color:#fff !important}
     body.lv-hc .card{background:#111 !important;border-color:#fff !important}
@@ -1167,11 +1177,15 @@ function speakText(text, lang) {
     badge.classList.add('show');
     updateSpeakButton();
   };
+  utt.onboundary = function(e) {
+    if (e.name === 'word') highlightTTSWord(e.charIndex);
+  };
   utt.onend = utt.onerror = () => {
     window.eduvisionIsSpeaking = false;
     window.eduvisionCurrentUtterance = null;
     badge.classList.remove('show');
     updateSpeakButton();
+    clearTTSHighlight();
   };
   window.speechSynthesis.speak(utt);
 }
@@ -1526,14 +1540,20 @@ function renderChunks(text) {
   if (!el) return;
   var chunks = parseChunks(text);
   if (!chunks.length) {
-    el.innerHTML = '<div class="result-chunk"><div class="chunk-body">' + esc(text) + '</div></div>';
+    el.innerHTML = '<div class="result-chunk"><div class="chunk-body">' + wrapWordsForTTS(text) + '</div></div>';
     return;
   }
+  // Accumulate char offset across all chunks so onboundary charIndex maps correctly
+  var globalOffset = 0;
   el.innerHTML = chunks.map(function(c, i) {
     var hdr = c.label ? '<div class="chunk-header"><span class="chunk-label">' + esc(c.label) + '</span>' +
       '<button class="chunk-speak" onclick="speakChunk(' + i + ')" aria-label="Đọc to phần này">🔊 Nghe</button></div>' : '';
-    return '<div class="result-chunk" data-chunk="' + i + '">' + hdr +
-      '<div class="chunk-body">' + esc(c.body.trim()) + '</div></div>';
+    var bodyText = c.body.trim();
+    var wrapped = wrapWordsForTTS(bodyText);
+    var html = '<div class="result-chunk" data-chunk="' + i + '" data-offset="' + globalOffset + '">' + hdr +
+      '<div class="chunk-body">' + wrapped + '</div></div>';
+    globalOffset += bodyText.length + 2;
+    return html;
   }).join('');
   window._resultChunks = chunks;
 }
@@ -1887,8 +1907,10 @@ function toggleSettings() {
   if (isOpen) {
     var lvCk = document.getElementById('lv-toggle-check');
     var darkCk = document.getElementById('dark-toggle-check');
+    var rulerCk = document.getElementById('ruler-toggle-check');
     if (lvCk) lvCk.checked = _lvMode;
     if (darkCk) darkCk.checked = _darkMode;
+    if (rulerCk) rulerCk.checked = _rulerOn;
     _syncSpeedBtns();
     // Focus trap: move focus inside panel, trap Tab/Shift+Tab
     setTimeout(function() {
@@ -1951,6 +1973,71 @@ function setSpeed(s) {
 function setFontSize(px) {
   document.body.style.fontSize = px + 'px';
   localStorage.setItem('ev_fontsize', String(px));
+}
+
+// ── READING RULER ─────────────────────────────────────────────────────────────
+var _rulerOn = localStorage.getItem('ev_ruler') === '1';
+(function initRuler() {
+  if (_rulerOn) document.body.classList.add('ruler-on');
+  var ruler = document.getElementById('reading-ruler');
+  if (!ruler) return;
+  var moveRuler = function(y) {
+    ruler.style.top = (y - ruler.offsetHeight / 2) + 'px';
+  };
+  document.addEventListener('mousemove', function(e) {
+    if (_rulerOn) moveRuler(e.clientY);
+  }, {passive: true});
+  document.addEventListener('touchmove', function(e) {
+    if (_rulerOn && e.touches.length) moveRuler(e.touches[0].clientY);
+  }, {passive: true});
+  document.addEventListener('touchstart', function(e) {
+    if (_rulerOn && e.touches.length) moveRuler(e.touches[0].clientY);
+  }, {passive: true});
+})();
+
+function toggleRuler(on) {
+  _rulerOn = on;
+  localStorage.setItem('ev_ruler', on ? '1' : '0');
+  document.body.classList.toggle('ruler-on', on);
+  announce(LANG === 'vi' ? (on ? 'Bật thước đọc' : 'Tắt thước đọc') : (on ? 'Reading ruler on' : 'Reading ruler off'));
+}
+
+// ── TTS WORD HIGHLIGHT ────────────────────────────────────────────────────────
+function wrapWordsForTTS(text) {
+  // Wrap each token (word + surrounding punctuation) in a span with char offset
+  var result = '';
+  var charIdx = 0;
+  var parts = text.split(/(\s+)/);
+  parts.forEach(function(part) {
+    if (/\s+/.test(part)) {
+      result += part;
+    } else if (part) {
+      result += '<span class="tts-word" data-start="' + charIdx + '" data-len="' + part.length + '">' + esc(part) + '</span>';
+    }
+    charIdx += part.length;
+  });
+  return result;
+}
+
+function highlightTTSWord(charIndex) {
+  var prev = document.querySelector('.tts-word.tts-active');
+  if (prev) prev.classList.remove('tts-active');
+  var words = document.querySelectorAll('.tts-word');
+  var best = null;
+  for (var i = 0; i < words.length; i++) {
+    var start = parseInt(words[i].dataset.start, 10);
+    var len = parseInt(words[i].dataset.len, 10);
+    if (charIndex >= start && charIndex < start + len + 5) { best = words[i]; break; }
+    if (start <= charIndex) best = words[i];
+  }
+  if (best) {
+    best.classList.add('tts-active');
+    best.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  }
+}
+
+function clearTTSHighlight() {
+  document.querySelectorAll('.tts-word.tts-active').forEach(function(el) { el.classList.remove('tts-active'); });
 }
 
 // ── SENTENCE NAVIGATION ───────────────────────────────────────────────────────
@@ -2051,6 +2138,9 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <!-- LOGIN MODAL -->
+<!-- READING RULER -->
+<div id="reading-ruler" role="presentation" aria-hidden="true"></div>
+
 <div id="login-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:16px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,0.22)" role="dialog" aria-label="Đăng nhập" aria-modal="true">
     <h2 style="margin:0 0 6px;color:var(--blue);font-size:20px">🔑 Đăng nhập</h2>
@@ -2115,6 +2205,14 @@ if ('serviceWorker' in navigator) {
       <button class="speed-btn" data-rate="2" onclick="setSpeed(2.0)">2×</button>
       <button class="speed-btn" data-rate="3" onclick="setSpeed(3.0)">3×</button>
     </div>
+  </div>
+
+  <div class="settings-row">
+    <label for="ruler-toggle-check" style="font-weight:600;cursor:pointer;flex:1">📏 Thước đọc (Reading Ruler)</label>
+    <label class="toggle-switch">
+      <input type="checkbox" id="ruler-toggle-check" onchange="toggleRuler(this.checked)">
+      <span class="toggle-slider"></span>
+    </label>
   </div>
 
   <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px">
