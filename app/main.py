@@ -660,6 +660,9 @@ def web_demo() -> str:
   <meta name="theme-color" content="#c41230"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="EduVision AI"/>
+  <meta name="description" content="Trợ lý học tập AI cho học sinh khiếm thị"/>
+  <link rel="manifest" href="/manifest.json"/>
   <title>EduVision AI</title>
   <style>
     :root{--red:#c41230;--blue:#12355b;--ink:#172033;--muted:#667085;--line:#d9e2ef;--soft:#f6f8fb;--panel:#fff;font-family:Inter,Arial,sans-serif}
@@ -1635,6 +1638,17 @@ async function changePassword() {
   var fs = localStorage.getItem('ev_fontsize');
   if (fs) document.body.style.fontSize = fs + 'px';
 })();
+
+// PWA Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js').then(function(reg) {
+      console.log('SW registered:', reg.scope);
+    }).catch(function(err) {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
 </script>
 
 <!-- LOGIN MODAL -->
@@ -2748,3 +2762,100 @@ def teacher_dashboard(request: Request) -> HTMLResponse:
 <a href="/admin/login">Đăng nhập lại</a>
 </body></html>""", status_code=400)
     return RedirectResponse(url=f"/admin/school/{school_code}", status_code=303)
+
+
+# ── PWA ───────────────────────────────────────────────────────────────────────
+
+@app.get("/manifest.json")
+def pwa_manifest():
+    from fastapi.responses import JSONResponse
+    return JSONResponse({
+        "name": "EduVision AI",
+        "short_name": "EduVision",
+        "description": "Trợ lý học tập AI cho học sinh khiếm thị",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f6f8fb",
+        "theme_color": "#c41230",
+        "lang": "vi",
+        "icons": [
+            {"src": "/favicon.ico", "sizes": "any", "type": "image/x-icon"},
+            {"src": "https://eduvision-ai-nu.vercel.app/favicon.ico", "sizes": "192x192", "type": "image/x-icon"}
+        ],
+        "categories": ["education", "accessibility"],
+        "screenshots": []
+    }, headers={"Content-Type": "application/manifest+json"})
+
+
+@app.get("/service-worker.js")
+def service_worker():
+    from fastapi.responses import Response
+    sw_code = r"""
+const CACHE_NAME = 'eduvision-v1';
+const CORE_ASSETS = [
+  '/',
+  '/privacy',
+];
+
+self.addEventListener('install', function(event) {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(CORE_ASSETS);
+    }).catch(function() {})
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return k !== CACHE_NAME; })
+            .map(function(k) { return caches.delete(k); })
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', function(event) {
+  var url = new URL(event.request.url);
+
+  // Network-first for API calls (ask, auth, ocr, tts)
+  if (['/ask', '/auth/', '/ocr', '/tts', '/stt', '/braille', '/profile', '/report'].some(function(p) {
+    return url.pathname.startsWith(p);
+  })) {
+    event.respondWith(
+      fetch(event.request).catch(function() {
+        return new Response(JSON.stringify({
+          answer: 'Bạn đang ngoại tuyến. Kết nối mạng và thử lại nhé.',
+          offline: true
+        }), { headers: { 'Content-Type': 'application/json' } });
+      })
+    );
+    return;
+  }
+
+  // Cache-first for static/page assets
+  event.respondWith(
+    caches.match(event.request).then(function(cached) {
+      if (cached) return cached;
+      return fetch(event.request).then(function(response) {
+        if (response && response.status === 200 && event.request.method === 'GET') {
+          var clone = response.clone();
+          caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
+        }
+        return response;
+      }).catch(function() {
+        // Offline fallback for page navigation
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+        return new Response('Ngoại tuyến', { status: 503 });
+      });
+    })
+  );
+});
+"""
+    return Response(content=sw_code, media_type="application/javascript",
+                    headers={"Service-Worker-Allowed": "/"})

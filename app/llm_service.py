@@ -1,12 +1,12 @@
-"""LLM service — Groq (Llama 3.3 70B) for EduVision AI tutor."""
+"""LLM service — Groq for EduVision AI tutor."""
 from __future__ import annotations
 
+import re
 import os
 from typing import Any, Dict, List, Optional
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 # Try in order until one works — Groq deprecates models periodically
-# As of 2026: openai/gpt-oss-* and groq/compound are the available models
 GROQ_MODELS_TO_TRY = [
     m for m in [
         os.environ.get("GROQ_MODEL", ""),
@@ -20,23 +20,62 @@ GROQ_MODELS_TO_TRY = [
 ]
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-BASE_SYSTEM_PROMPT = """You are EduVision AI — a warm, patient tutor for visually impaired and low-vision students.
+# ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
 
-Rules (always follow):
-- NEVER say "look at the figure", "as shown in the image", "you can see". Replace with tactile/verbal descriptions.
-- Use: "imagine", "touch", "feel", "use sticks/string/cardboard/desk edge".
-- Explain step by step. Keep each step short and clear.
-- For geometry: describe points, sides, angles, equal lengths, parallel/perpendicular relationships verbally.
-- For English: give corrected sentence → grammar explanation → 2-3 practice examples.
-- For any subject: give direct answer → explanation → tactile/real-life example → quick check question.
-- Response length: concise but complete. No unnecessary filler phrases.
-- Never start with "Great question!" or similar sycophantic openers.
+BASE_SYSTEM_PROMPT = """You are EduVision AI — a warm, patient AI tutor designed exclusively for visually impaired and low-vision students (blind or low-vision).
 
-Language: reply in the same language as the student's question (Vietnamese if asked in Vietnamese, English if in English)."""
+═══ CRITICAL RULES — NEVER BREAK THESE ═══
+
+FORBIDDEN phrases (replace immediately if tempted to write them):
+  ✗ "look at the figure / diagram / image / graph / table"
+  ✗ "as shown / as you can see / as illustrated"
+  ✗ "the picture shows / the image depicts"
+  ✗ "nhìn vào hình / nhìn hình vẽ / nhìn sơ đồ"
+  ✗ "như hình bên / như hình vẽ / trong hình / theo hình"
+  ✗ "bạn thấy rằng / bạn nhìn thấy / nhìn vào đây"
+
+REQUIRED replacements:
+  ✓ "Hãy tưởng tượng..." / "Imagine..."
+  ✓ "Dùng ngón tay chạm..." / "Touch / feel with your fingers..."
+  ✓ "Hãy dùng que/sợi dây/mép bàn để cảm nhận..." / "Use a stick / string / desk edge to feel..."
+  ✓ "Theo cách khác, ta có thể hiểu..." / "Another way to understand this..."
+  ✓ "Nghe kỹ mô tả sau:" / "Listen carefully to this description:"
+
+═══ EXPLANATION STRUCTURE ═══
+
+For EVERY answer, follow this structure:
+  1. Direct answer (1-2 sentences max)
+  2. Step-by-step explanation using ONLY words, sounds, touch
+  3. Tactile / real-life example (physical object the student can touch)
+  4. Quick check: ask 1 short question to verify understanding
+
+For GEOMETRY:
+  - Describe shapes using: number of sides, angles, equal/unequal lengths, straight/curved, parallel/perpendicular
+  - Example: "Tam giác cân có 3 cạnh. Hai cạnh bên dài bằng nhau — như hai cạnh chữ V. Cạnh đáy ngắn hơn hoặc bằng."
+  - Never say "nhìn vào góc trên" — say "đỉnh (góc nhọn ở giữa, cao nhất)"
+
+For MATH:
+  - Read every symbol aloud: "÷" = "chia cho", "²" = "bình phương", "√" = "căn bậc hai"
+  - Break calculation into single steps, one per line
+  - Confirm intermediate results before continuing
+
+For ENGLISH:
+  - Say the word/sentence in Vietnamese first, then English
+  - Give phonetic pronunciation hint in Vietnamese sounds
+  - 2-3 short practice examples
+
+═══ TONE & FORMAT ═══
+- Warm, encouraging — like a patient teacher who genuinely cares
+- Use the student's name if known
+- Sentences short (under 20 words each)
+- No bullet points with complex symbols (●, ★) — use numbers or dashes
+- No tables — describe data in sentences
+- If answer is long, say "Thầy/cô sẽ giải thích từng bước" then pause between steps
+
+Language: reply in the SAME language as the student's question. Vietnamese → Vietnamese. English → English."""
 
 
 def _build_system_prompt(profile: Optional[Dict[str, Any]] = None) -> str:
-    """Xây system prompt cá nhân hoá theo hồ sơ học sinh."""
     if not profile or not profile.get("name"):
         return BASE_SYSTEM_PROMPT
 
@@ -49,22 +88,58 @@ def _build_system_prompt(profile: Optional[Dict[str, Any]] = None) -> str:
     english_level = profile.get("english_level", "")
     goal = profile.get("learning_goal", "")
 
-    profile_section = f"""
---- THÔNG TIN HỌC SINH ---
-Tên: {name} | Lớp: {grade} | Thị lực: {vision}
-Toán: {math_level} | Tiếng Anh trình độ: {english_level}
-Điểm yếu: {weaknesses}
-Điểm mạnh: {strengths}
-Mục tiêu học: {goal}
---- KẾT THÚC HỒ SƠ ---
+    vision_rule = (
+        "HS MÙ HOÀN TOÀN: TUYỆT ĐỐI không dùng màu sắc, không mô tả bằng hình ảnh. Chỉ dùng âm thanh, xúc giác, phương hướng (trái/phải/trên/dưới)."
+        if "blind" in vision
+        else "HS NHÌN KÉM: Ưu tiên chữ lớn rõ ràng, tương phản cao. Hạn chế mô tả hình phức tạp. Có thể nhắc đến màu nếu cần thiết."
+    )
 
-Điều chỉnh giải thích phù hợp với thị lực "{vision}" của {name}:
-- Nếu mù hoàn toàn (blind): chỉ dùng mô tả xúc giác và âm thanh, không dùng màu sắc.
-- Nếu thị lực kém (low vision): có thể dùng tương phản cao, chữ lớn, hạn chế mô tả hình ảnh phức tạp.
-- Điều chỉnh độ khó theo lớp và điểm yếu đã biết của học sinh."""
+    profile_section = f"""
+
+═══ HỒ SƠ HỌC SINH ═══
+Tên: {name} | Lớp: {grade} | Thị lực: {vision}
+Toán: {math_level} | Tiếng Anh: {english_level}
+Điểm yếu cần hỗ trợ: {weaknesses}
+Điểm mạnh: {strengths}
+Mục tiêu: {goal}
+
+{vision_rule}
+
+Luôn gọi học sinh bằng tên "{name}". Điều chỉnh độ khó phù hợp với lớp {grade}."""
 
     return BASE_SYSTEM_PROMPT + profile_section
 
+
+# ── VISUAL LANGUAGE FILTER ────────────────────────────────────────────────────
+
+_VISUAL_PATTERNS_VI = [
+    (r'nhìn vào (hình|sơ đồ|bảng|ảnh|biểu đồ)', 'hãy tưởng tượng'),
+    (r'như (hình|sơ đồ) (bên|vẽ|dưới|trên|sau)', 'như sau'),
+    (r'trong (hình|ảnh|sơ đồ) (ta|chúng ta|bạn|em) (thấy|nhìn thấy)', 'ta có'),
+    (r'(bạn|em) (có thể )?(nhìn|thấy) (rằng|được|thấy)', 'ta nhận thấy rằng'),
+    (r'theo hình (vẽ|bên|sau|trên|dưới)', 'theo cách giải thích sau'),
+    (r'hình (vẽ|ảnh) (cho|minh họa|thể hiện)', 'ví dụ thực tế'),
+]
+
+_VISUAL_PATTERNS_EN = [
+    (r'look at (the )?(figure|diagram|image|graph|picture|chart)', 'consider'),
+    (r'as (shown|illustrated|depicted|seen) (in|above|below)', 'as described'),
+    (r'(you can |)(see|observe|notice) (that |)(in the )?(figure|image|diagram)', 'we find'),
+    (r'the (figure|image|diagram|picture) (shows|depicts|illustrates)', 'the explanation shows'),
+    (r'(from|in) the (figure|graph|chart|table)', 'from the description'),
+]
+
+
+def _fix_visual_language(text: str, language: str = "vi") -> str:
+    """Replace visual-centric phrases with accessible alternatives."""
+    patterns = _VISUAL_PATTERNS_VI if language == "vi" else _VISUAL_PATTERNS_EN
+    result = text
+    for pattern, replacement in patterns:
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+    return result
+
+
+# ── MAIN ASK FUNCTION ─────────────────────────────────────────────────────────
 
 def ask_groq(
     question: str,
@@ -74,18 +149,21 @@ def ask_groq(
     language: str = "vi",
     profile: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Call Groq Llama 3.3 70B and return the answer text."""
     if not GROQ_API_KEY:
         return _fallback(question, subject, language)
 
     context_text = "\n".join(f"- {c}" for c in context_chunks[:3]) if context_chunks else ""
-    lang_hint = "QUAN TRỌNG: Toàn bộ câu trả lời phải bằng tiếng Việt, kể cả thuật ngữ kỹ thuật (dịch hoặc giữ nguyên kèm giải thích)." if language == "vi" else "Reply entirely in English."
+    lang_enforce = (
+        "BẮT BUỘC: Toàn bộ câu trả lời bằng tiếng Việt. KHÔNG dùng từ tiếng Anh nếu không cần thiết."
+        if language == "vi"
+        else "Reply entirely in English."
+    )
 
     student_name = profile.get("name", "") if profile else ""
-    name_hint = f"Xưng hô với học sinh bằng tên: {student_name}. " if student_name else ""
+    name_hint = f"Tên học sinh: {student_name}. Xưng hô bằng tên này." if student_name else ""
 
     user_msg = (
-        f"{lang_hint} {name_hint}\n"
+        f"{lang_enforce} {name_hint}\n"
         f"Học sinh lớp: {grade}. Môn: {subject}.\n"
         + (f"Kiến thức liên quan:\n{context_text}\n\n" if context_text else "")
         + f"Câu hỏi: {question}"
@@ -100,18 +178,15 @@ def ask_groq(
         def _call(model: str) -> dict:
             return httpx.post(
                 GROQ_API_URL,
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json",
-                },
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
                 json={
                     "model": model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_msg},
                     ],
-                    "max_tokens": 900,
-                    "temperature": 0.7,
+                    "max_tokens": 1000,
+                    "temperature": 0.65,
                 },
                 timeout=30,
             ).json()
@@ -120,7 +195,8 @@ def ask_groq(
         for model in GROQ_MODELS_TO_TRY:
             data = _call(model)
             if "choices" in data:
-                return data["choices"][0]["message"]["content"].strip()
+                raw = data["choices"][0]["message"]["content"].strip()
+                return _fix_visual_language(raw, language)
             last_err = data.get("error", {}).get("message", str(data)) if "error" in data else "No choices"
         return _fallback(question, subject, language, error=last_err)
     except Exception as exc:
@@ -128,15 +204,14 @@ def ask_groq(
 
 
 def _fallback(question: str, subject: str, language: str, error: str = "") -> str:
-    """Simple fallback when Groq is unavailable."""
     if language == "vi":
         return (
-            f"Câu hỏi của em: {question}\n\n"
-            "Hiện tại hệ thống AI đang bận. Em thử lại sau ít phút nhé.\n"
-            + (f"(Lỗi: {error})" if error else "")
+            f"Câu hỏi: {question}\n\n"
+            "Hệ thống AI tạm thời bận. Em thử lại sau ít phút nhé.\n"
+            + (f"(Lỗi kỹ thuật: {error})" if error else "")
         )
     return (
-        f"Your question: {question}\n\n"
-        "The AI service is temporarily busy. Please try again in a moment.\n"
-        + (f"(Error: {error})" if error else "")
+        f"Question: {question}\n\n"
+        "The AI service is temporarily unavailable. Please try again in a moment.\n"
+        + (f"(Technical error: {error})" if error else "")
     )
