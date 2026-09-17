@@ -6,6 +6,7 @@ __pycache__/
 # Runtime data
 data/eduvision.db
 data/*.db
+!data/eduvision_seed.db
 media/*
 !media/.gitkeep
 uploads/*

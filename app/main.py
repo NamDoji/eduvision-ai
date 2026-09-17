@@ -140,6 +140,12 @@ def init_db() -> None:
 
 @app.on_event("startup")
 def startup() -> None:
+    # Vercel cold-start: copy bundled seed DB to writable /tmp if not yet present
+    if os.environ.get("VERCEL"):
+        seed_src = BASE_DIR / "data" / "eduvision_seed.db"
+        if seed_src.exists() and not DB_FILE.exists():
+            DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(seed_src, DB_FILE)
     init_db()
     init_auth_db()
 
