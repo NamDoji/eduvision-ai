@@ -1627,7 +1627,7 @@ async function fetchAndShowBraille(text) {
 function copyBraille() {
   if (!_lastBraille) { showToast('Chưa có nội dung Braille. Hỏi AI trước.', 'warn'); return; }
   var doToast = function() {
-    showToast('✅ Đã sao chép chữ nổi Braille vào clipboard!\n Dán vào phần mềm đọc Braille hoặc thiết bị chữ nổi.', 'ok', 5000);
+    showToast('✅ Đã sao chép chữ nổi Braille! Dán vào phần mềm đọc Braille hoặc thiết bị chữ nổi.', 'ok', 5000);
     var b = document.getElementById('btn-braille');
     if (b) { b.textContent = '✅ Đã sao chép!'; setTimeout(function(){ b.innerHTML = '⠿ Chữ nổi Braille'; }, 3000); }
   };
