@@ -987,11 +987,11 @@ function setLang(lang) {
   document.getElementById('btn-en').setAttribute('aria-pressed', lang === 'en');
   document.getElementById('html-root').lang = T.htmlLang;
   // UI text
-  document.getElementById('hero-title').textContent = T.heroTitle;
-  document.getElementById('hero-lead').textContent = T.heroLead;
+  var _ht = document.getElementById('hero-title'); if (_ht) _ht.textContent = T.heroTitle;
+  var _hl = document.getElementById('hero-lead'); if (_hl) _hl.textContent = T.heroLead;
   document.getElementById('tutor-title').textContent = T.tutorTitle;
   document.getElementById('lbl-subject').textContent = T.lblSubject;
-  document.getElementById('lbl-student').textContent = T.lblStudent;
+  var _ls = document.getElementById('lbl-student'); if (_ls) _ls.textContent = T.lblStudent;
   document.getElementById('lbl-question').textContent = T.lblQuestion;
   document.getElementById('opt-geo').textContent = T.optGeo;
   document.getElementById('opt-eng').textContent = T.optEng;
