@@ -6,14 +6,14 @@ from typing import Any, Dict, List, Optional
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 # Try in order until one works — Groq deprecates models periodically
-# As of 2026: old llama3/gemma/mixtral IDs decommissioned; use openai/gpt-oss-* or groq/compound
+# As of 2026: openai/gpt-oss-* and groq/compound are the available models
 GROQ_MODELS_TO_TRY = [
     m for m in [
         os.environ.get("GROQ_MODEL", ""),
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
         "openai/gpt-oss-20b",
         "openai/gpt-oss-120b",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
         "groq/compound",
         "groq/compound-mini",
     ] if m
