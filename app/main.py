@@ -774,8 +774,14 @@ def web_demo() -> str:
     <div class="brand">
       <div>EduVision AI</div>
     </div>
-    <!-- HEADER ACTIONS: settings + language -->
+    <!-- HEADER ACTIONS: login + settings + language -->
     <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+      <div id="auth-bar">
+        <button id="btn-login-open" onclick="openLoginModal()" aria-label="Đăng nhập"
+          style="background:var(--blue);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:700;min-height:42px;white-space:nowrap">🔑 Đăng nhập</button>
+        <span id="auth-user" style="display:none;font-size:13px;font-weight:700;color:var(--blue);white-space:nowrap"></span>
+        <button id="btn-logout-hdr" onclick="doLogout()" style="display:none;background:#f3f4f6;border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;font-weight:700;min-height:42px">Đăng xuất</button>
+      </div>
       <button id="btn-settings" onclick="toggleSettings()" aria-label="Cài đặt trợ năng" title="Cài đặt" style="background:#f3f4f6;border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;min-height:42px;line-height:1;color:var(--ink)">⚙</button>
       <div class="lang-toggle" role="group" aria-label="Chọn ngôn ngữ / Select language">
         <button id="btn-vi" class="active" onclick="setLang('vi')" aria-pressed="true" aria-label="Chuyển sang Tiếng Việt">VI</button>
@@ -1399,6 +1405,88 @@ async function describeImage() {
   finally { hideLoading(); }
 }
 
+// ── LOGIN MODAL ───────────────────────────────────────────────────────────────
+function openLoginModal() {
+  var m = document.getElementById('login-modal');
+  if (m) { m.style.display = 'flex'; setTimeout(function(){ document.getElementById('login-username').focus(); }, 100); }
+}
+function closeLoginModal() {
+  var m = document.getElementById('login-modal');
+  if (m) m.style.display = 'none';
+}
+// Close on backdrop click
+document.addEventListener('click', function(e) {
+  var m = document.getElementById('login-modal');
+  if (m && e.target === m) closeLoginModal();
+});
+
+async function doLogin() {
+  var username = (document.getElementById('login-username').value || '').trim();
+  var password = document.getElementById('login-password').value;
+  var msg = document.getElementById('login-msg');
+  msg.textContent = '';
+  if (!username || !password) { msg.style.color='#ef4444'; msg.textContent='Vui lòng nhập đủ thông tin.'; return; }
+  try {
+    var r = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: username, password: password})
+    });
+    var j = await r.json();
+    if (r.ok) {
+      msg.style.color = '#16a34a';
+      msg.textContent = '✅ Đăng nhập thành công!';
+      _updateAuthBar(username);
+      // Điền student ID vào ô mã HS
+      var studentEl = document.getElementById('student');
+      if (studentEl && j.student_id) studentEl.value = j.student_id;
+      // Điền vào form đổi mật khẩu
+      var cpUser = document.getElementById('cp-username');
+      if (cpUser) cpUser.value = username;
+      setTimeout(closeLoginModal, 800);
+    } else {
+      msg.style.color = '#ef4444';
+      msg.textContent = '❌ ' + (j.detail || 'Sai tài khoản hoặc mật khẩu');
+    }
+  } catch(err) {
+    msg.style.color = '#ef4444';
+    msg.textContent = '❌ Lỗi kết nối';
+  }
+}
+
+async function doLogout() {
+  await fetch('/auth/logout', {method: 'POST'}).catch(function(){});
+  _updateAuthBar(null);
+}
+
+function _updateAuthBar(username) {
+  var btnOpen = document.getElementById('btn-login-open');
+  var authUser = document.getElementById('auth-user');
+  var btnLogout = document.getElementById('btn-logout-hdr');
+  if (username) {
+    if (btnOpen) btnOpen.style.display = 'none';
+    if (authUser) { authUser.style.display = 'inline'; authUser.textContent = '👤 ' + username; }
+    if (btnLogout) btnLogout.style.display = 'inline-block';
+  } else {
+    if (btnOpen) btnOpen.style.display = 'inline-block';
+    if (authUser) authUser.style.display = 'none';
+    if (btnLogout) btnLogout.style.display = 'none';
+  }
+}
+
+// Check session on load
+(async function checkSession() {
+  try {
+    var r = await fetch('/auth/me');
+    if (r.ok) {
+      var j = await r.json();
+      _updateAuthBar(j.username || j.display_name);
+      var cpUser = document.getElementById('cp-username');
+      if (cpUser && j.username) cpUser.value = j.username;
+    }
+  } catch(e) {}
+})();
+
 // ── SETTINGS & LOW VISION MODE ────────────────────────────────────────────────
 var _ttsSpeed = parseFloat(localStorage.getItem('ev_speed') || '1.0');
 var _lvMode = localStorage.getItem('ev_lv') === '1';
@@ -1466,8 +1554,9 @@ var _sentences = [];
 var _sentIdx = 0;
 
 function splitSentences(text) {
-  var raw = text.split(/(?<=[.!?。…])\s+|\n{2,}/);
-  var parts = raw.map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 5; });
+  // Dùng replace thay vì lookbehind để tương thích Safari iOS cũ
+  var normalized = text.replace(/([.!?。…])\s+/g, '$1\n').replace(/\n{2,}/g, '\n');
+  var parts = normalized.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 5; });
   return parts.length ? parts : [text];
 }
 
@@ -1546,6 +1635,24 @@ async function changePassword() {
   if (fs) document.body.style.fontSize = fs + 'px';
 })();
 </script>
+
+<!-- LOGIN MODAL -->
+<div id="login-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,0.22)" role="dialog" aria-label="Đăng nhập" aria-modal="true">
+    <h2 style="margin:0 0 6px;color:var(--blue);font-size:20px">🔑 Đăng nhập</h2>
+    <p style="margin:0 0 18px;color:var(--muted);font-size:14px">Học sinh Trường Nguyễn Đình Chiểu dùng tài khoản <strong>ndc001–ndc200</strong>, mật khẩu <strong>1</strong></p>
+    <div style="display:grid;gap:10px">
+      <input type="text" id="login-username" placeholder="Tên đăng nhập (vd: ndc001)" autocomplete="username"
+        aria-label="Tên đăng nhập" style="padding:12px;border:1.5px solid var(--line);border-radius:10px;font-size:16px;width:100%;box-sizing:border-box">
+      <input type="password" id="login-password" placeholder="Mật khẩu" autocomplete="current-password"
+        aria-label="Mật khẩu" style="padding:12px;border:1.5px solid var(--line);border-radius:10px;font-size:16px;width:100%;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter') doLogin()">
+      <button onclick="doLogin()" style="background:var(--blue);color:#fff;border:0;border-radius:10px;padding:14px;font-weight:700;cursor:pointer;font-size:16px;min-height:48px">Đăng nhập</button>
+      <p id="login-msg" style="margin:0;font-weight:600;font-size:14px;min-height:18px;text-align:center"></p>
+    </div>
+    <button onclick="closeLoginModal()" aria-label="Đóng" style="position:absolute;top:12px;right:16px;border:0;background:transparent;font-size:26px;cursor:pointer;color:#9ca3af;line-height:1">×</button>
+  </div>
+</div>
 
 <!-- SETTINGS PANEL (slide-in từ phải) -->
 <div class="settings-panel" id="settings-panel" role="dialog" aria-label="Cài đặt trợ năng" aria-modal="true">
@@ -1948,7 +2055,15 @@ def do_login(payload: LoginRequest) -> JSONResponse:
     token = auth_login(payload.username, payload.password)
     if not token:
         raise HTTPException(status_code=401, detail="Sai tên đăng nhập hoặc mật khẩu")
-    resp = JSONResponse({"status": "ok", "token": token})
+    user = get_user_by_token(token)
+    resp = JSONResponse({
+        "status": "ok",
+        "token": token,
+        "username": user["username"] if user else payload.username,
+        "display_name": user["display_name"] if user else "",
+        "student_id": user["student_id"] if user else "",
+        "role": user["role"] if user else "student",
+    })
     resp.set_cookie("session", token, httponly=True, samesite="lax", max_age=7 * 24 * 3600)
     return resp
 
