@@ -4,6 +4,7 @@ import csv
 import importlib.util
 import json
 import os
+import base64
 import re
 import shutil
 import sqlite3
@@ -37,7 +38,7 @@ TTS_DIR = AUDIO_OUTPUT_DIR
 app = FastAPI(
     title="EduVision AI Backend",
     description="Conference-ready local backend for accessible tutoring through OpenClaw.",
-    version="0.4.1",
+    version="0.5.0",
 )
 
 
@@ -647,7 +648,10 @@ def web_demo() -> str:
 <html lang="vi" id="html-root">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#c41230"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
   <title>EduVision AI</title>
   <style>
     :root{--red:#c41230;--blue:#12355b;--ink:#172033;--muted:#667085;--line:#d9e2ef;--soft:#f6f8fb;--panel:#fff;font-family:Inter,Arial,sans-serif}
@@ -699,6 +703,22 @@ def web_demo() -> str:
     @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
     @media(max-width:560px){body{font-size:16px}.topbar{padding:10px 14px;gap:8px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.lang-toggle button{padding:8px 12px;font-size:14px;min-width:50px}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
     @media(max-width:360px){.brand{font-size:15px}.lang-toggle button{padding:7px 10px;min-width:46px}.status{grid-template-columns:1fr}}
+    /* ── TAB NAVIGATION (mobile) ── */
+    .tab-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--line);z-index:200;padding-bottom:env(safe-area-inset-bottom)}
+    .tab-nav>.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;border:0;background:transparent;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px;-webkit-tap-highlight-color:transparent;transition:color 0.12s;line-height:1.2}
+    .tab-btn .t-icon{font-size:22px;line-height:1.1;display:block}
+    .tab-btn.active{color:var(--red)}
+    .tab-btn:focus-visible{outline:3px solid var(--red);outline-offset:-2px}
+    .vision-hint{color:var(--muted);font-size:14px;margin:0 0 12px;line-height:1.4}
+    /* Desktop: always show all panes */
+    @media(min-width:901px){.tab-pane{display:block !important}}
+    @media(max-width:900px){
+      .tab-nav{display:flex}
+      body{padding-bottom:72px}
+      .tab-pane{display:none !important}
+      .tab-pane.active{display:block !important}
+      #pane-result pre{min-height:60vh;max-height:75vh}
+    }
   </style>
 </head>
 <body>
@@ -734,6 +754,7 @@ def web_demo() -> str:
 
   <div class="grid">
     <div>
+      <div id="pane-ask" class="tab-pane active">
       <!-- AI TUTOR -->
       <div class="card">
         <h2 id="tutor-title">🤖 AI Gia sư</h2>
@@ -796,7 +817,9 @@ def web_demo() -> str:
           <button class="btn blue" onclick="report()" id="btn-report">📊 Báo cáo tiến độ</button>
         </div>
       </div>
+      </div><!-- /pane-ask -->
 
+      <div id="pane-tools" class="tab-pane">
       <!-- OCR -->
       <div class="card">
         <h2 id="ocr-title">📷 Đọc tài liệu (OCR)</h2>
@@ -807,10 +830,22 @@ def web_demo() -> str:
           <button class="btn ghost" onclick="speakResult()" id="btn-speak-ocr">🔊 Đọc kết quả</button>
         </div>
       </div>
+
+      <!-- VISION DESCRIBE -->
+      <div class="card">
+        <h2 id="vision-title">👁 Mô tả hình vẽ</h2>
+        <p class="vision-hint" id="vision-hint">Tải ảnh hình vẽ toán học — AI mô tả bằng lời cho học sinh khiếm thị.</p>
+        <input id="visionFile" type="file" accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh hình vẽ"/>
+        <div class="actions">
+          <button class="btn" onclick="describeImage()" id="btn-vision">👁 Mô tả hình</button>
+          <button class="btn ghost" onclick="speakResult()" id="btn-speak-vision">🔊 Đọc kết quả</button>
+        </div>
+      </div>
+      </div><!-- /pane-tools -->
     </div>
 
     <!-- RESULT PANEL -->
-    <div class="result-panel">
+    <div class="result-panel tab-pane" id="pane-result">
       <div class="card">
         <h2 id="result-title">📋 Kết quả</h2>
         <div id="sr-status" aria-live="assertive" aria-atomic="true"
@@ -855,6 +890,7 @@ const UI = {
     demoGeo:'Tam giác cân là gì? Giải thích dùng ví dụ xúc giác cho học sinh khiếm thị lớp 8.',
     demoEng:'Sửa câu sau: I have many meeting today',
     ttsLang:'vi-VN', ttsVoiceHint:'Giọng Linh (vi-VN)',
+    visionTitle:'👁 Mô tả hình vẽ', visionHint:'Tải ảnh hình vẽ toán học — AI mô tả bằng lời cho học sinh khiếm thị.', btnVision:'👁 Mô tả hình',
   },
   en: {
     htmlLang:'en', heroTitle:'Learning Assistant for Visually Impaired Students',
@@ -884,6 +920,7 @@ const UI = {
     demoGeo:'Explain the Pythagorean theorem for a visually impaired Grade 8 student using tactile examples.',
     demoEng:'Please correct: I have many meeting today',
     ttsLang:'en-US', ttsVoiceHint:'Samantha (en-US)',
+    visionTitle:'👁 Describe Figure', visionHint:'Upload a math figure image — AI will describe it verbally for visually impaired students.', btnVision:'👁 Describe Figure',
   }
 };
 
@@ -938,6 +975,9 @@ function setLang(lang) {
   }
   document.getElementById('result').textContent = T.resultReady;
   document.getElementById('speaking-text').textContent = T.speaking;
+  const _vt = document.getElementById('vision-title'); if (_vt) _vt.textContent = T.visionTitle;
+  const _vh = document.getElementById('vision-hint'); if (_vh) _vh.textContent = T.visionHint;
+  const _bv = document.getElementById('btn-vision'); if (_bv) _bv.textContent = T.btnVision;
   stopSpeech(false);
 }
 
@@ -1082,6 +1122,8 @@ function setResult(data) {
   } else if (data && data.ocr_text) toSpeak = data.ocr_text.slice(0, 800);
   else if (typeof data === 'string') toSpeak = data;
   if (toSpeak) speakText(toSpeak, LANG);
+  // Mobile: auto-switch to result tab
+  if (window.matchMedia('(max-width:900px)').matches) showTab('result');
   // Chuyển focus về vùng kết quả để screen reader tự đọc
   setTimeout(() => {
     const el = document.getElementById('result');
@@ -1269,7 +1311,50 @@ function copyBraille() {
     setTimeout(() => { b.textContent = '⠿ Braille'; }, 2000);
   });
 }
+
+// ── TAB NAVIGATION (mobile) ──────────────────────────────────────────────────
+const _TABS = ['ask','result','tools'];
+
+function showTab(name) {
+  _TABS.forEach(t => {
+    const pane = document.getElementById('pane-'+t);
+    const btn = document.querySelector('[data-tab="'+t+'"]');
+    if (pane) pane.classList.toggle('active', t === name);
+    if (btn) { btn.classList.toggle('active', t === name); btn.setAttribute('aria-pressed', String(t === name)); }
+  });
+  if (name === 'result') {
+    setTimeout(() => { const el = document.getElementById('result'); if(el){el.setAttribute('tabindex','-1');el.focus();} }, 100);
+  }
+  // Save active tab
+  try { sessionStorage.setItem('ev_tab', name); } catch(e) {}
+}
+
+// ── VISION DESCRIBE ─────────────────────────────────────────────────────────
+async function describeImage() {
+  const input = document.getElementById('visionFile');
+  if (!input || !input.files.length) {
+    alert(LANG === 'vi' ? 'Vui lòng chọn ảnh hình vẽ' : 'Please select an image file');
+    return;
+  }
+  showLoading();
+  try {
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    fd.append('language', LANG);
+    const res = await fetch('/describe-image', { method: 'POST', body: fd });
+    const data = await readResponse(res);
+    const desc = data.description || data;
+    setResult(typeof desc === 'string' ? desc : JSON.stringify(desc, null, 2));
+  } catch(e) { displayError(e.message); }
+  finally { hideLoading(); }
+}
 </script>
+
+<nav class="tab-nav" role="navigation" aria-label="Điều hướng chính">
+  <button class="tab-btn active" data-tab="ask" onclick="showTab('ask')" aria-pressed="true"><span class="t-icon">🤖</span>Hỏi AI</button>
+  <button class="tab-btn" data-tab="result" onclick="showTab('result')" aria-pressed="false"><span class="t-icon">📋</span>Kết quả</button>
+  <button class="tab-btn" data-tab="tools" onclick="showTab('tools')" aria-pressed="false"><span class="t-icon">🛠</span>Công cụ</button>
+</nav>
 </body>
 </html>"""
 
@@ -1278,7 +1363,7 @@ def health() -> Dict[str, Any]:
     return {
         "status": "ok",
         "service": "eduvision-ai",
-        "version": "0.4.1",
+        "version": "0.5.0",
         "ocr": ocr_status(),
         "tts_available": bool(shutil.which("say")),
         "tts_voices": available_tts_voices(),
@@ -1659,6 +1744,31 @@ def teacher_list_students(request: Request) -> List[Dict[str, Any]]:
     _require_teacher(request)
     return list_users()
 
+
+@app.get("/teacher/analytics")
+def teacher_analytics(request: Request) -> Dict[str, Any]:
+    """Dashboard thống kê: tổng lượt học, theo môn, theo học sinh."""
+    _require_teacher(request)
+    with db() as conn:
+        total = conn.execute("SELECT COUNT(*) AS c FROM learning_events").fetchone()["c"]
+        by_subject = conn.execute(
+            "SELECT subject, COUNT(*) AS cnt FROM learning_events GROUP BY subject ORDER BY cnt DESC"
+        ).fetchall()
+        by_student = conn.execute(
+            "SELECT student_id, COUNT(*) AS cnt, MAX(created_at) AS last_active "
+            "FROM learning_events GROUP BY student_id ORDER BY last_active DESC"
+        ).fetchall()
+        recent = conn.execute(
+            "SELECT student_id, subject, input, created_at FROM learning_events ORDER BY id DESC LIMIT 20"
+        ).fetchall()
+    return {
+        "total_events": total,
+        "by_subject": [dict(r) for r in by_subject],
+        "by_student": [dict(r) for r in by_student],
+        "recent": [dict(r) for r in recent],
+    }
+
+
 @app.get("/teacher", response_class=HTMLResponse)
 def teacher_dashboard(request: Request) -> HTMLResponse:
     user = _get_current_user(request)
@@ -1670,6 +1780,26 @@ def teacher_dashboard(request: Request) -> HTMLResponse:
             f"<td>{u.get('student_id','—')}</td><td>{u['created_at'][:10]}</td></tr>"
             for u in users
         )
+        with db() as _ac:
+            _total = _ac.execute("SELECT COUNT(*) AS c FROM learning_events").fetchone()["c"]
+            _by_sub = _ac.execute(
+                "SELECT subject, COUNT(*) AS cnt FROM learning_events GROUP BY subject ORDER BY cnt DESC LIMIT 8"
+            ).fetchall()
+            _by_stu = _ac.execute(
+                "SELECT student_id, COUNT(*) AS cnt, MAX(created_at) AS last FROM learning_events "
+                "GROUP BY student_id ORDER BY last DESC LIMIT 10"
+            ).fetchall()
+        _sub_rows = "".join(
+            f"<tr><td style='padding:4px 10px'>{r['subject']}</td>"
+            f"<td style='padding:4px 10px'><span style='background:#3b82f6;color:#fff;border-radius:4px;padding:2px 8px;font-size:12px'>{r['cnt']}</span></td></tr>"
+            for r in _by_sub
+        ) or "<tr><td colspan='2' style='color:#6b7280;text-align:center;padding:8px'>Chưa có dữ liệu</td></tr>"
+        _stu_rows = "".join(
+            f"<tr><td style='padding:4px 10px'>{r['student_id']}</td>"
+            f"<td style='padding:4px 10px;text-align:center'>{r['cnt']}</td>"
+            f"<td style='padding:4px 10px;font-size:12px;color:#6b7280'>{(r['last'] or '')[:16]}</td></tr>"
+            for r in _by_stu
+        ) or "<tr><td colspan='3' style='color:#6b7280;text-align:center;padding:8px'>Chưa có dữ liệu</td></tr>"
         auth_html = f"""
 <div style="background:#e8f5e9;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
   <b>Xin chào, {user['display_name'] or user['username']}!</b> &nbsp;
@@ -1683,6 +1813,25 @@ def teacher_dashboard(request: Request) -> HTMLResponse:
   <thead style="background:#f3f4f6;"><tr><th>Tên</th><th>Vai trò</th><th>Mã HS</th><th>Ngày tạo</th></tr></thead>
   <tbody>{rows}</tbody>
 </table>
+
+<h2 style="margin-top:32px;">📊 Thống kê sử dụng — {_total} lượt học</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+  <div>
+    <h3 style="margin:0 0 8px;font-size:14px;color:#374151;">Theo môn học</h3>
+    <table border="1" cellpadding="6" cellspacing="0" style="width:100%;border-collapse:collapse;border-color:#e5e7eb;font-size:13px;">
+      <thead style="background:#f3f4f6;"><tr><th style="padding:4px 10px;text-align:left">Môn</th><th style="padding:4px 10px;text-align:left">Lượt</th></tr></thead>
+      <tbody>{_sub_rows}</tbody>
+    </table>
+  </div>
+  <div>
+    <h3 style="margin:0 0 8px;font-size:14px;color:#374151;">Theo học sinh</h3>
+    <table border="1" cellpadding="6" cellspacing="0" style="width:100%;border-collapse:collapse;border-color:#e5e7eb;font-size:13px;">
+      <thead style="background:#f3f4f6;"><tr><th style="padding:4px 10px;text-align:left">Mã HS</th><th style="padding:4px 10px">Lượt</th><th style="padding:4px 10px">Cuối</th></tr></thead>
+      <tbody>{_stu_rows}</tbody>
+    </table>
+  </div>
+</div>
+
 <h2 style="margin-top:32px;">Tạo tài khoản học sinh</h2>
 <form id="cf" style="display:grid;gap:10px;max-width:420px;">
   <input name="display_name" placeholder="Họ tên học sinh *" required style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
@@ -1749,6 +1898,68 @@ h1{{color:#12355b;}} table{{font-size:14px;}} th,td{{text-align:left;}}
 {auth_html}
 <p style="margin-top:32px;"><a href="/">← Về trang học sinh</a></p>
 </body></html>""")
+
+
+## ── VISION DESCRIBE ──────────────────────────────────────────────────────────
+
+@app.post("/describe-image")
+async def describe_image(
+    file: UploadFile = File(...),
+    language: str = Form(default="vi"),
+) -> Dict[str, Any]:
+    """Mô tả hình vẽ toán học bằng AI Vision (Groq Llama 4 Scout) cho học sinh khiếm thị."""
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY chưa được cấu hình")
+
+    img_bytes = await file.read()
+    b64 = base64.b64encode(img_bytes).decode()
+    mime = file.content_type or "image/jpeg"
+
+    if language == "vi":
+        system = "Bạn là trợ lý giáo dục cho học sinh khiếm thị. Mô tả hình ảnh bằng ngôn ngữ xúc giác và mô tả không gian, không dùng từ 'nhìn'."
+        prompt = (
+            "Đây là hình vẽ từ bài toán hoặc tài liệu học tập. "
+            "Mô tả chi tiết bằng lời cho học sinh khiếm thị: hình dạng, điểm, đoạn thẳng, góc, số liệu, kích thước, vị trí tương đối. "
+            "Không dùng 'nhìn vào hình' hay 'như hình vẽ' — thay bằng ngôn ngữ xúc giác và mô tả không gian (trái/phải/trên/dưới)."
+        )
+    else:
+        system = "You are an accessible math educator. Describe visual content verbally for blind and low-vision students using tactile, spatial language."
+        prompt = (
+            "This is a figure from a math problem or study material. "
+            "Describe it in detail for a visually impaired student: shapes, points, segments, angles, measurements, relative positions. "
+            "Do not say 'look at the figure' — use tactile and spatial language (left/right/above/below) instead."
+        )
+
+    try:
+        import httpx as _hx
+        async with _hx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": [
+                            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+                            {"type": "text", "text": prompt},
+                        ]},
+                    ],
+                    "max_tokens": 800,
+                },
+            )
+        data = resp.json()
+        description = (
+            data["choices"][0]["message"]["content"].strip()
+            if "choices" in data
+            else ("Không thể mô tả hình vẽ lúc này." if language == "vi" else "Could not describe the image.")
+        )
+    except Exception as exc:
+        description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
+
+    log_event("vision", "vision", file.filename or "image", description[:200])
+    return {"description": description, "model": "llama-4-scout-17b-16e-instruct"}
 
 
 ## ── DEMO RESET ────────────────────────────────────────────────────────────────
