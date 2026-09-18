@@ -3007,7 +3007,7 @@ async def describe_image(
         import httpx as _hx
         async with _hx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
                 headers={"Content-Type": "application/json"},
                 json={
                     "contents": [{
@@ -3031,7 +3031,7 @@ async def describe_image(
         description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
 
     log_event("vision", "vision", file.filename or "image", description[:200])
-    return {"description": description, "model": "gemini-2.0-flash"}
+    return {"description": description, "model": "gemini-3.6-flash"}
 
 
 ## ── DEMO RESET ────────────────────────────────────────────────────────────────
