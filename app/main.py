@@ -2929,11 +2929,13 @@ async def describe_image(
                 },
             )
         data = resp.json()
-        description = (
-            data["choices"][0]["message"]["content"].strip()
-            if "choices" in data
-            else ("Không thể mô tả hình vẽ lúc này." if language == "vi" else "Could not describe the image.")
-        )
+        if "choices" in data:
+            description = data["choices"][0]["message"]["content"].strip()
+        else:
+            # Surface Groq error detail for debugging
+            err_detail = data.get("error", {})
+            err_msg = err_detail.get("message", str(data)) if isinstance(err_detail, dict) else str(err_detail)
+            description = f"Lỗi API: {err_msg}" if language == "vi" else f"API Error: {err_msg}"
     except Exception as exc:
         description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
 
