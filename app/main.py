@@ -795,7 +795,25 @@ def web_demo() -> HTMLResponse:
     /* ── CHUNKED RESULT ── */
     .result-chunks{min-height:300px;display:flex;flex-direction:column;gap:12px;padding:4px 0}
     .result-chunk{background:#111827;color:#e8eef8;border-radius:10px;padding:16px;line-height:1.6;word-break:break-word;font-size:14px}
-    .result-chunk.empty-state{color:#8aabb8;text-align:center;padding:40px 16px;min-height:260px;display:flex;align-items:center;justify-content:center;font-size:15px}
+    .result-chunk.empty-state{background:transparent;border:none;padding:0;min-height:unset}
+    /* Desktop hero banner */
+    .desktop-hero{display:none;background:linear-gradient(135deg,#0d2b5e 0%,#12355b 50%,#1a4a7a 100%);color:#fff;border-radius:16px;padding:36px 40px;margin-bottom:20px;position:relative;overflow:hidden}
+    .desktop-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:220px;height:220px;background:rgba(255,255,255,0.04);border-radius:50%}
+    .desktop-hero::after{content:'';position:absolute;bottom:-60px;right:60px;width:160px;height:160px;background:rgba(255,255,255,0.03);border-radius:50%}
+    .desktop-hero h1{font-size:28px;font-weight:900;color:#fff;margin:0 0 8px;line-height:1.2}
+    .desktop-hero p{color:rgba(255,255,255,0.8);font-size:16px;margin:0 0 24px;line-height:1.5}
+    .hero-feats{display:flex;flex-wrap:wrap;gap:10px}
+    .hero-feat{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);border-radius:30px;padding:7px 16px;font-size:14px;font-weight:600;color:#fff;display:flex;align-items:center;gap:6px}
+    @media(min-width:901px){.desktop-hero{display:block}}
+    /* Welcome panel (right col empty state) */
+    .welcome-panel{padding:8px 0}
+    .welcome-panel .wp-card{background:#f0f5ff;border:1.5px solid #c7d8f5;border-radius:14px;padding:22px;margin-bottom:14px}
+    .welcome-panel .wp-card h3{margin:0 0 14px;font-size:17px;color:#12355b;font-weight:800}
+    .welcome-panel .wp-feat{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;font-size:15px;line-height:1.4}
+    .welcome-panel .wp-feat:last-child{margin-bottom:0}
+    .welcome-panel .wp-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+    .welcome-panel .wp-shortcut{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fff;border-radius:8px;font-size:14px;margin-bottom:6px;border:1px solid #dde6f5}
+    .welcome-panel .wp-shortcut kbd{background:#e2e8f0;border-radius:4px;padding:2px 8px;font-size:12px;font-family:monospace;font-weight:700;color:#374151}
     .chunk-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
     .chunk-label{font-size:12px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.05em}
     .chunk-speak{background:transparent;border:1px solid #374151;border-radius:6px;color:#93c5fd;font-size:13px;padding:4px 10px;cursor:pointer;min-height:30px;transition:background .15s}
@@ -873,6 +891,20 @@ def web_demo() -> HTMLResponse:
     <div class="stat"><strong>OCR</strong><span>...</span></div>
     <div class="stat"><strong id="voice-label">Giọng nói</strong><span id="voice-val">...</span></div>
     <div class="stat"><strong>OCR.space</strong><span id="gv-val">...</span></div>
+  </div>
+
+  <!-- Desktop hero — only visible on screens >900px -->
+  <div class="desktop-hero">
+    <h1>🤖 EduVision AI — Trợ lý học tập cho học sinh khiếm thị</h1>
+    <p>Công nghệ AI giúp học sinh khiếm thị tiếp cận kiến thức bình đẳng — hỏi bằng giọng nói, nghe kết quả, mô tả hình vẽ toán học.</p>
+    <div class="hero-feats">
+      <span class="hero-feat">🎙 Hỏi bằng giọng nói</span>
+      <span class="hero-feat">🔊 Đọc to kết quả</span>
+      <span class="hero-feat">📐 6 môn học</span>
+      <span class="hero-feat">📷 OCR đọc tài liệu</span>
+      <span class="hero-feat">👁 Mô tả hình vẽ</span>
+      <span class="hero-feat">🌐 Tiếng Việt & English</span>
+    </div>
   </div>
 
   <div class="grid">
@@ -1007,7 +1039,29 @@ def web_demo() -> HTMLResponse:
           style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
         <div id="result" role="log" aria-live="polite" aria-atomic="false"
           aria-label="Kết quả từ AI" class="result-chunks">
-          <div class="result-chunk empty-state">Sẵn sàng. Hãy đặt câu hỏi hoặc chọn một demo để bắt đầu.</div>
+          <div class="result-chunk empty-state">
+            <div class="welcome-panel">
+              <div class="wp-card">
+                <h3>💡 Cách sử dụng</h3>
+                <div class="wp-feat"><span class="wp-icon">1️⃣</span><span><strong>Chọn môn học</strong> bên trái (Hình học, Toán, Tiếng Anh…)</span></div>
+                <div class="wp-feat"><span class="wp-icon">2️⃣</span><span><strong>Nhập câu hỏi</strong> bằng bàn phím hoặc nhấn 🎤 để hỏi bằng giọng nói</span></div>
+                <div class="wp-feat"><span class="wp-icon">3️⃣</span><span><strong>Nhận câu trả lời</strong> ở đây — nhấn 🔊 để nghe đọc to</span></div>
+              </div>
+              <div class="wp-card">
+                <h3>🛠 Công cụ hỗ trợ khiếm thị</h3>
+                <div class="wp-feat"><span class="wp-icon">📷</span><span><strong>OCR:</strong> Chụp ảnh bài tập, AI đọc nội dung thành tiếng</span></div>
+                <div class="wp-feat"><span class="wp-icon">👁</span><span><strong>Mô tả hình:</strong> Tải ảnh hình vẽ toán, AI giải thích bằng lời</span></div>
+                <div class="wp-feat"><span class="wp-icon">⚙</span><span><strong>Cài đặt</strong> (góc phải): chữ to hơn, chế độ tối, contrast cao</span></div>
+              </div>
+              <div class="wp-card">
+                <h3>⌨ Phím tắt nhanh</h3>
+                <div class="wp-shortcut"><span>Gửi câu hỏi</span><kbd>Enter</kbd></div>
+                <div class="wp-shortcut"><span>Câu tiếp theo</span><kbd>Alt + →</kbd></div>
+                <div class="wp-shortcut"><span>Câu trước</span><kbd>Alt + ←</kbd></div>
+                <div class="wp-shortcut"><span>Dừng / tiếp tục đọc</span><kbd>Ctrl + Space</kbd></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="sentence-nav" id="sentence-nav" style="display:none" role="navigation" aria-label="Điều hướng câu">
           <button onclick="prevSentence()" aria-label="Câu trước">⬅ Trước</button>
