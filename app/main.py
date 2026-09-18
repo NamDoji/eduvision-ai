@@ -871,7 +871,7 @@ def web_demo() -> HTMLResponse:
       <div id="pane-ask" class="tab-pane active">
       <!-- AI TUTOR -->
       <div class="card">
-        <h2 id="tutor-title">🤖 AI Gia sư</h2>
+        <h2 id="tutor-title">🤖 AI Gia sư — Trợ lý học tập người khiếm thị</h2>
         <div class="row2">
           <div>
             <label id="lbl-subject" style="margin-bottom:8px">Môn học</label>
