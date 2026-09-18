@@ -49,7 +49,7 @@ class AskRequest(BaseModel):
     question: str
     grade: Optional[str] = None
     vision_status: Optional[str] = None
-    subject: Literal["geometry", "english", "general"] = "general"
+    subject: Literal["geometry", "english", "math", "science", "history", "general"] = "general"
     language: Literal["en", "vi"] = "en"
 
 
@@ -762,21 +762,23 @@ def web_demo() -> HTMLResponse:
     body.lv-hc .suggestion-chip{background:#111 !important;border-color:#ff0 !important;color:#ff0 !important}
     body.lv-hc .hist-item{background:#111 !important;border-color:#555 !important;color:#ccc !important}
     /* ── SUBJECT GRID ── */
-    .subject-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-    .subj-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 6px;border:2px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);min-height:64px;transition:all .15s;line-height:1.2;text-align:center;-webkit-tap-highlight-color:transparent}
-    .subj-btn:hover{background:var(--soft);border-color:var(--blue)}
-    .subj-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 8px rgba(18,53,91,.3)}
+    .subject-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+    .subj-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 6px;border:2px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);min-height:76px;transition:all .18s cubic-bezier(.4,0,.2,1);line-height:1.2;text-align:center;-webkit-tap-highlight-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .subj-btn .subj-icon{font-size:26px;line-height:1;display:block}
+    .subj-btn:hover{background:var(--soft);border-color:var(--blue);transform:translateY(-2px);box-shadow:0 4px 12px rgba(18,53,91,.15)}
+    .subj-btn.active{background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border-color:#1565C0;box-shadow:0 4px 14px rgba(18,53,91,.35);transform:translateY(-1px)}
     .subj-btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     .subj-icon{font-size:22px;line-height:1}
     body.lv-mode .subj-btn{font-size:15px;min-height:72px;gap:6px}
     body.lv-mode .subj-icon{font-size:26px}
-    @media(max-width:560px){.subject-grid{grid-template-columns:repeat(3,1fr);gap:6px}.subj-btn{padding:10px 4px;min-height:60px;font-size:12px}}
+    @media(max-width:560px){.subject-grid{grid-template-columns:repeat(3,1fr);gap:6px}.subj-btn{padding:10px 4px;min-height:68px;font-size:12px}.subj-btn .subj-icon{font-size:22px}}
     /* ── SUGGESTIONS ── */
-    .suggestions-wrap{margin:8px 0 4px}
+    .suggestions-wrap{margin:10px 0 6px;background:var(--soft);border-radius:10px;padding:10px 12px;border:1px solid var(--line)}
+    .suggestions-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
     .suggestions-label{font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
-    .suggestions-row{display:flex;flex-wrap:wrap;gap:6px}
-    .suggestion-chip{padding:7px 12px;border:1.5px solid var(--line);border-radius:20px;background:#fff;font-size:13px;color:var(--blue);cursor:pointer;transition:all .15s;min-height:36px;line-height:1.3;text-align:left}
-    .suggestion-chip:hover{background:var(--soft);border-color:var(--blue)}
+    .suggestions-row{display:flex;flex-wrap:wrap;gap:8px}
+    .suggestion-chip{padding:7px 14px;border:1.5px solid #1565C0;border-radius:20px;background:#EFF6FF;font-size:13px;color:#1565C0;cursor:pointer;transition:all .15s;min-height:36px;line-height:1.3;text-align:left;font-weight:500}
+    .suggestion-chip:hover{background:#1565C0;color:#fff;border-color:#1565C0;transform:translateY(-1px);box-shadow:0 2px 8px rgba(18,53,91,.2)}
     .suggestion-chip:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     /* ── HISTORY ── */
     .hist-wrap{margin:4px 0 10px}
@@ -1256,7 +1258,14 @@ async function readResponse(res) {
     data = await res.text();
   }
   if (!res.ok) {
-    const message = data && typeof data === 'object' ? (data.detail || data.message) : data;
+    let message;
+    if (data && typeof data === 'object') {
+      if (typeof data.detail === 'string') message = data.detail;
+      else if (Array.isArray(data.detail)) message = data.detail.map(e => e.msg || String(e)).join('; ');
+      else message = data.message || data.error || JSON.stringify(data);
+    } else {
+      message = String(data || '');
+    }
     throw new Error(message || res.statusText);
   }
   return data;
