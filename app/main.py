@@ -2197,35 +2197,44 @@ function closeAccountSheet() {
 function forceCloseAccountSheet() {
   _setSheetOpen(false);
 }
-// Failsafe: clear stuck acct-open when page becomes visible again
-window.addEventListener('pageshow', function() { _setSheetOpen(false); });
+// Failsafe: chỉ clear acct-open KHI bị kẹt (backdrop không có .open).
+// KHÔNG đóng modal đang mở hợp lệ — tránh iOS keyboard/tab-switch trigger.
+function _clearStuckAcctOpen() {
+  var bd = document.getElementById('acct-backdrop');
+  if (bd && bd.classList.contains('open')) return; // modal đang mở → không can thiệp
+  document.body.classList.remove('acct-open');
+  document.documentElement.style.overflow = '';
+}
+window.addEventListener('pageshow', _clearStuckAcctOpen);
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible') _setSheetOpen(false);
+  if (document.visibilityState === 'visible') _clearStuckAcctOpen();
 });
 
-// Backdrop tap-to-close: touchstart+touchend phải cùng trên backdrop.
-// _touchInsideSheet: nếu touch bắt đầu trong sheet → block backdrop click 600ms
-// (tránh iOS keyboard-reflow coordinate shift: tap input → keyboard → viewport shift → click trượt lên backdrop)
+// Backdrop tap-to-close
 (function() {
+  // Track touchend để phân biệt touch vs mouse click trên backdrop
+  var _lastTouchEnd = 0;
+  document.addEventListener('touchend', function() { _lastTouchEnd = Date.now(); }, {passive: true, capture: true});
+
   function _setup() {
     var backdrop = document.getElementById('acct-backdrop');
     var sheet = document.getElementById('acct-sheet');
     if (!backdrop) return;
-    // stopPropagation trên click của sheet: chặn iOS synthetic click (sau keyboard reflow)
-    // bubble lên backdrop. Button onclick vẫn chạy vì onclick fire trước khi bubble.
-    if (sheet) {
-      sheet.addEventListener('click', function(e) { e.stopPropagation(); });
-    }
+    // sheet.click.stopPropagation: chặn iOS synthetic click từ bên trong sheet bubble lên backdrop.
+    // Buttons bên trong vẫn hoạt động (onclick fire trên button trước khi bubble đến sheet).
+    if (sheet) { sheet.addEventListener('click', function(e) { e.stopPropagation(); }); }
     var _tsbOnBackdrop = false;
     backdrop.addEventListener('touchstart', function(e) {
       _tsbOnBackdrop = (e.target === backdrop);
     }, {passive: true});
+    // Mobile: đóng qua touchend (không dùng click để tránh iOS synthetic click)
     backdrop.addEventListener('touchend', function(e) {
       if (_tsbOnBackdrop && e.target === backdrop) closeAccountSheet();
       _tsbOnBackdrop = false;
     }, {passive: true});
-    // Desktop: click ngoài sheet để đóng
+    // Desktop only: click ngoài sheet (bỏ qua nếu đến từ touch trong 500ms)
     backdrop.addEventListener('click', function(e) {
+      if (Date.now() - _lastTouchEnd < 500) return;
       if (e.target === backdrop) closeAccountSheet();
     });
   }
