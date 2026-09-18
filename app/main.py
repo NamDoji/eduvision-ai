@@ -1897,17 +1897,35 @@ function _updateAuthBar(username) {
 }
 
 // Account sheet
+var _sheetOpenTime = 0;
+var _savedScrollY = 0;
+
+function _lockBody() {
+  _savedScrollY = window.scrollY || 0;
+  document.body.style.position = 'fixed';
+  document.body.style.top = '-' + _savedScrollY + 'px';
+  document.body.style.width = '100%';
+}
+function _unlockBody() {
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _savedScrollY);
+}
+
 function _setSheetOpen(open) {
   var backdrop = document.getElementById('acct-backdrop');
   if (!backdrop) return;
   if (open) {
+    _sheetOpenTime = Date.now();
     backdrop.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    _lockBody();
   } else {
     backdrop.classList.remove('open');
-    document.body.style.overflow = '';
+    _unlockBody();
   }
 }
+
 function toggleAccountSheet() {
   var backdrop = document.getElementById('acct-backdrop');
   if (!backdrop) return;
@@ -1915,19 +1933,43 @@ function toggleAccountSheet() {
     _setSheetOpen(false);
   } else {
     _setSheetOpen(true);
-    // Focus username input after animation
     var loggedout = document.getElementById('acct-loggedout');
     if (loggedout && loggedout.style.display !== 'none') {
       setTimeout(function(){
         var inp = document.getElementById('as-username');
         if (inp) inp.focus();
-      }, 250);
+      }, 300);
     }
   }
 }
+
 function closeAccountSheet() {
+  // Guard: ignore close calls within 500ms of opening (iOS phantom clicks from keyboard)
+  if (Date.now() - _sheetOpenTime < 500) return;
   _setSheetOpen(false);
 }
+
+// Backdrop tap-to-close: only close if tap started AND ended on backdrop (not sheet)
+(function() {
+  var _tapOnBackdrop = false;
+  document.addEventListener('touchstart', function(e) {
+    var backdrop = document.getElementById('acct-backdrop');
+    _tapOnBackdrop = backdrop && backdrop.classList.contains('open') && e.target === backdrop;
+  }, {passive: true});
+  document.addEventListener('touchend', function(e) {
+    if (_tapOnBackdrop && e.target === document.getElementById('acct-backdrop')) {
+      closeAccountSheet();
+    }
+    _tapOnBackdrop = false;
+  }, {passive: true});
+  // Desktop click on backdrop
+  document.addEventListener('click', function(e) {
+    var backdrop = document.getElementById('acct-backdrop');
+    if (backdrop && backdrop.classList.contains('open') && e.target === backdrop) {
+      closeAccountSheet();
+    }
+  });
+})();
 
 async function doLoginSheet() {
   var username = (document.getElementById('as-username') || {}).value || '';
@@ -2351,9 +2393,9 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <!-- Login modal backdrop — tap outside to close -->
-<div class="acct-backdrop" id="acct-backdrop" onclick="closeAccountSheet()" role="dialog" aria-label="Đăng nhập tài khoản" aria-modal="true">
+<div class="acct-backdrop" id="acct-backdrop" role="dialog" aria-label="Đăng nhập tài khoản" aria-modal="true">
   <!-- Modal card: stopPropagation prevents tap-outside from closing when tapping inside -->
-  <div class="acct-sheet" id="acct-sheet" onclick="event.stopPropagation()">
+  <div class="acct-sheet" id="acct-sheet">
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
