@@ -966,7 +966,7 @@ def web_demo() -> HTMLResponse:
           <button class="btn ghost" id="btn-repeat" onclick="repeatLast()" style="display:none" aria-label="Hỏi lại câu trước">↩ Hỏi lại</button>
           <button class="btn ghost" onclick="copyBraille()" id="btn-braille" style="display:none;" aria-label="Sao chép chữ Braille vào clipboard">⠿ Braille</button>
         </div>
-        <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span><button class="btn-stop-inline" onclick="stopSpeech(true)">⏹ Dừng</button></div>
+        <div class="speaking-badge" id="speaking-badge">🔊 <span id="speaking-text">Đang đọc...</span><button class="btn-stop-inline" onclick="pauseResumeSpeech()" id="btn-pause-resume">⏸ Tạm dừng</button><button class="btn-stop-inline" onclick="stopSpeech(true)" style="margin-left:6px">⏹ Dừng</button></div>
       </div>
 
       <!-- STUDY PLAN -->
@@ -1210,10 +1210,27 @@ function stopSpeech(showMessage = true) {
   window.eduvisionCurrentUtterance = null;
   const badge = document.getElementById('speaking-badge');
   if (badge) badge.classList.remove('show');
+  var btnPR = document.getElementById('btn-pause-resume');
+  if (btnPR) btnPR.textContent = '⏸ Tạm dừng';
   updateSpeakButton();
   if (showMessage) {
     const result = document.getElementById('result');
     if (result) result.setAttribute('aria-label', UI[LANG].stopped);
+  }
+}
+
+function pauseResumeSpeech() {
+  if (!window.speechSynthesis) return;
+  var btn = document.getElementById('btn-pause-resume');
+  var badge = document.getElementById('speaking-badge');
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+    if (btn) btn.textContent = '⏸ Tạm dừng';
+    if (badge) { var sp = badge.querySelector('#speaking-text'); if (sp) sp.textContent = UI[LANG].speaking || 'Đang đọc...'; }
+  } else {
+    window.speechSynthesis.pause();
+    if (btn) btn.textContent = '▶ Đọc tiếp';
+    if (badge) { var sp = badge.querySelector('#speaking-text'); if (sp) sp.textContent = 'Đã tạm dừng'; }
   }
 }
 
