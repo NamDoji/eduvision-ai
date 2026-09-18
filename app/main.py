@@ -2211,25 +2211,22 @@ document.addEventListener('visibilitychange', function() {
     var backdrop = document.getElementById('acct-backdrop');
     var sheet = document.getElementById('acct-sheet');
     if (!backdrop) return;
-    var _tsbOnBackdrop = false;
-    var _touchInsideSheet = false;
-    var _touchInsideTimer = null;
+    // stopPropagation trên click của sheet: chặn iOS synthetic click (sau keyboard reflow)
+    // bubble lên backdrop. Button onclick vẫn chạy vì onclick fire trước khi bubble.
     if (sheet) {
-      sheet.addEventListener('touchstart', function() {
-        _touchInsideSheet = true;
-        clearTimeout(_touchInsideTimer);
-        _touchInsideTimer = setTimeout(function() { _touchInsideSheet = false; }, 800);
-      }, {passive: true});
+      sheet.addEventListener('click', function(e) { e.stopPropagation(); });
     }
+    var _tsbOnBackdrop = false;
     backdrop.addEventListener('touchstart', function(e) {
       _tsbOnBackdrop = (e.target === backdrop);
     }, {passive: true});
     backdrop.addEventListener('touchend', function(e) {
-      if (!_touchInsideSheet && _tsbOnBackdrop && e.target === backdrop) closeAccountSheet();
+      if (_tsbOnBackdrop && e.target === backdrop) closeAccountSheet();
       _tsbOnBackdrop = false;
     }, {passive: true});
+    // Desktop: click ngoài sheet để đóng
     backdrop.addEventListener('click', function(e) {
-      if (!_touchInsideSheet && e.target === backdrop) closeAccountSheet();
+      if (e.target === backdrop) closeAccountSheet();
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _setup);
