@@ -849,6 +849,7 @@ def web_demo() -> HTMLResponse:
     .sentence-nav button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     /* ── TAB NAVIGATION (mobile) ── */
     .tab-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--line);z-index:200;padding-bottom:env(safe-area-inset-bottom)}
+    body.acct-open .tab-nav{pointer-events:none !important;opacity:0.4}
     .tab-nav>.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;border:0;background:transparent;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px;-webkit-tap-highlight-color:transparent;transition:color 0.12s;line-height:1.2}
     .tab-btn .t-icon{font-size:24px;line-height:1.1;display:block}
     body.lv-mode .tab-nav>.tab-btn{font-size:14px}
@@ -1919,9 +1920,11 @@ function _setSheetOpen(open) {
   if (open) {
     _sheetOpenTime = Date.now();
     backdrop.classList.add('open');
+    document.body.classList.add('acct-open');
     _lockBody();
   } else {
     backdrop.classList.remove('open');
+    document.body.classList.remove('acct-open');
     _unlockBody();
   }
 }
@@ -1944,8 +1947,12 @@ function toggleAccountSheet() {
 }
 
 function closeAccountSheet() {
-  // Guard: ignore close calls within 500ms of opening (iOS phantom clicks from keyboard)
-  if (Date.now() - _sheetOpenTime < 500) return;
+  // Guard: ignore close calls within 2s of opening (iOS phantom clicks from keyboard opening)
+  if (Date.now() - _sheetOpenTime < 2000) return;
+  _setSheetOpen(false);
+}
+// Explicit close — always works (from the ✕ button inside modal)
+function forceCloseAccountSheet() {
   _setSheetOpen(false);
 }
 
@@ -2403,7 +2410,7 @@ if ('serviceWorker' in navigator) {
         <div style="font-size:40px;line-height:1;margin-bottom:6px">👤</div>
         <h2 style="margin:0;font-size:24px;font-weight:900;color:var(--blue)">Tài khoản</h2>
       </div>
-      <button onclick="closeAccountSheet()" aria-label="Đóng"
+      <button onclick="forceCloseAccountSheet()" aria-label="Đóng"
         style="border:0;background:#f3f4f6;border-radius:50%;width:44px;height:44px;font-size:22px;cursor:pointer;color:#374151;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>
     </div>
 
