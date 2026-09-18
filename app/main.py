@@ -2182,13 +2182,8 @@ function toggleAccountSheet() {
     _setSheetOpen(false);
   } else {
     _setSheetOpen(true);
-    var loggedout = document.getElementById('acct-loggedout');
-    if (loggedout && loggedout.style.display !== 'none') {
-      setTimeout(function(){
-        var inp = document.getElementById('as-username');
-        if (inp) inp.focus();
-      }, 300);
-    }
+    // KHÔNG auto-focus: iOS Safari sẽ dispatch synthetic click sau focus()
+    // làm backdrop nhận e.target===backdrop → modal tự đóng (bug iOS keyboard coordinate shift)
   }
 }
 
@@ -2223,7 +2218,7 @@ document.addEventListener('visibilitychange', function() {
       sheet.addEventListener('touchstart', function() {
         _touchInsideSheet = true;
         clearTimeout(_touchInsideTimer);
-        _touchInsideTimer = setTimeout(function() { _touchInsideSheet = false; }, 600);
+        _touchInsideTimer = setTimeout(function() { _touchInsideSheet = false; }, 800);
       }, {passive: true});
     }
     backdrop.addEventListener('touchstart', function(e) {
