@@ -3010,7 +3010,7 @@ async def describe_image(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
                 json={
-                    "model": "qwen/qwen3.6-27b",
+                    "model": "llama-3.2-11b-vision-preview",
                     "messages": [
                         {"role": "system", "content": system},
                         {"role": "user", "content": [
@@ -3033,7 +3033,7 @@ async def describe_image(
         description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
 
     log_event("vision", "vision", file.filename or "image", description[:200])
-    return {"description": description, "model": "qwen3.6-27b"}
+    return {"description": description, "model": "llama-3.2-vision"}
 
 
 ## ── DEMO RESET ────────────────────────────────────────────────────────────────
