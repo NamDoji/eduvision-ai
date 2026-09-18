@@ -834,7 +834,11 @@ def web_demo() -> HTMLResponse:
     .tab-btn:focus-visible{outline:3px solid var(--red);outline-offset:-2px}
     .vision-hint{color:var(--muted);font-size:14px;margin:0 0 12px;line-height:1.4}
     /* Desktop: always show all panes */
-    @media(min-width:901px){.tab-pane{display:block !important}}
+    @media(min-width:901px){
+      .tab-pane{display:block !important}
+      #desktop-acct-btn{display:inline-flex !important}
+      .acct-sheet{bottom:0;border-radius:16px 16px 0 0;max-width:420px;left:auto;right:16px}
+    }
     @media(max-width:900px){
       .tab-nav{display:flex}
       body{padding-bottom:72px}
@@ -855,6 +859,8 @@ def web_demo() -> HTMLResponse:
   <span class="brand">EduVision AI</span>
   <button onclick="toggleSettings()" aria-label="Cài đặt trợ năng"
     style="margin-left:auto;background:transparent;border:0;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1;color:var(--ink)">⚙</button>
+  <button onclick="toggleAccountSheet()" id="desktop-acct-btn" aria-label="Tài khoản"
+    style="background:var(--blue);color:#fff;border:0;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:700;cursor:pointer;display:none;align-items:center;gap:6px;min-height:36px">👤 <span id="desktop-acct-label">Tài khoản</span></button>
 </div>
 
 <main id="main-content">
@@ -1802,17 +1808,20 @@ function _updateAuthBar(username) {
   var dispEl = document.getElementById('as-username-display');
   var tabIcon = document.getElementById('tab-acct-icon');
   var tabLabel = document.getElementById('tab-acct-label');
+  var desktopLabel = document.getElementById('desktop-acct-label');
   if (username) {
     if (loggedout) loggedout.style.display = 'none';
     if (loggedin) loggedin.style.display = 'block';
     if (dispEl) dispEl.textContent = '👤 ' + username;
     if (tabIcon) tabIcon.textContent = '✅';
     if (tabLabel) tabLabel.textContent = username.length > 8 ? username.slice(0,8)+'…' : username;
+    if (desktopLabel) desktopLabel.textContent = username.length > 10 ? username.slice(0,10)+'…' : username;
   } else {
     if (loggedout) loggedout.style.display = 'block';
     if (loggedin) loggedin.style.display = 'none';
     if (tabIcon) tabIcon.textContent = '👤';
     if (tabLabel) tabLabel.textContent = 'Tài khoản';
+    if (desktopLabel) desktopLabel.textContent = 'Tài khoản';
   }
 }
 
@@ -1824,10 +1833,13 @@ function toggleAccountSheet() {
     sheet.classList.remove('open');
   } else {
     sheet.classList.add('open');
-    // Focus first input if logging in
-    var inp = document.getElementById('as-username');
-    var loggedout = document.getElementById('acct-loggedout');
-    if (inp && loggedout && loggedout.style.display !== 'none') setTimeout(function(){ inp.focus(); }, 100);
+    // Only auto-focus on desktop (mobile keyboard causes layout jump)
+    var isMobile = window.innerWidth <= 900;
+    if (!isMobile) {
+      var inp = document.getElementById('as-username');
+      var loggedout = document.getElementById('acct-loggedout');
+      if (inp && loggedout && loggedout.style.display !== 'none') setTimeout(function(){ inp.focus(); }, 150);
+    }
   }
 }
 function closeAccountSheet() {
