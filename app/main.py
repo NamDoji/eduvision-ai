@@ -2212,29 +2212,49 @@ document.addEventListener('visibilitychange', function() {
 
 // Backdrop tap-to-close
 (function() {
-  // Track touchend để phân biệt touch vs mouse click trên backdrop
-  var _lastTouchEnd = 0;
-  document.addEventListener('touchend', function() { _lastTouchEnd = Date.now(); }, {passive: true, capture: true});
-
   function _setup() {
     var backdrop = document.getElementById('acct-backdrop');
     var sheet = document.getElementById('acct-sheet');
-    if (!backdrop) return;
-    // sheet.click.stopPropagation: chặn iOS synthetic click từ bên trong sheet bubble lên backdrop.
-    // Buttons bên trong vẫn hoạt động (onclick fire trên button trước khi bubble đến sheet).
-    if (sheet) { sheet.addEventListener('click', function(e) { e.stopPropagation(); }); }
+    if (!backdrop || !sheet) return;
+
+    // === LAYER 1: pointer-events:none trên backdrop khi input có focus ===
+    // Khi user focus vào input → keyboard iOS hiện → mọi synthetic click/touch
+    // đều bị bỏ qua hoàn toàn vì backdrop không nhận event.
+    // Child elements (sheet, buttons) vẫn hoạt động bình thường.
+    var _peTimer = null;
+    function _onInputFocus() {
+      clearTimeout(_peTimer);
+      backdrop.style.pointerEvents = 'none';
+    }
+    function _onInputBlur() {
+      clearTimeout(_peTimer);
+      _peTimer = setTimeout(function() { backdrop.style.pointerEvents = ''; }, 600);
+    }
+    sheet.querySelectorAll('input').forEach(function(inp) {
+      inp.addEventListener('focus', _onInputFocus);
+      inp.addEventListener('blur', _onInputBlur);
+    });
+
+    // === LAYER 2: sheet.click.stopPropagation ===
+    // Bắt mọi click còn sót (vd: keyboard dismiss → input blur → 600ms trước khi
+    // pointer-events phục hồi) không bubble lên backdrop.
+    sheet.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    // === LAYER 3: touchend-based close (mobile) ===
     var _tsbOnBackdrop = false;
     backdrop.addEventListener('touchstart', function(e) {
       _tsbOnBackdrop = (e.target === backdrop);
     }, {passive: true});
-    // Mobile: đóng qua touchend (không dùng click để tránh iOS synthetic click)
     backdrop.addEventListener('touchend', function(e) {
       if (_tsbOnBackdrop && e.target === backdrop) closeAccountSheet();
       _tsbOnBackdrop = false;
     }, {passive: true});
-    // Desktop only: click ngoài sheet (bỏ qua nếu đến từ touch trong 500ms)
+
+    // === LAYER 4: click-based close (desktop mouse only) ===
+    var _lastTouchEnd = 0;
+    document.addEventListener('touchend', function() { _lastTouchEnd = Date.now(); }, {passive: true, capture: true});
     backdrop.addEventListener('click', function(e) {
-      if (Date.now() - _lastTouchEnd < 500) return;
+      if (Date.now() - _lastTouchEnd < 1000) return; // ignore touch-triggered click
       if (e.target === backdrop) closeAccountSheet();
     });
   }
