@@ -2122,7 +2122,7 @@ async function doLogin() {
 async function doLogout() {
   await fetch('/auth/logout', {method: 'POST'}).catch(function(){});
   _updateAuthBar(null);
-  closeAccountSheet();
+  forceCloseAccountSheet();
 }
 
 function _updateAuthBar(username) {
@@ -2149,28 +2149,11 @@ function _updateAuthBar(username) {
   }
 }
 
-// ── ACCOUNT SHEET (iOS-safe) ──────────────────────────────────────────────────
+// ── ACCOUNT SHEET ─────────────────────────────────────────────────────────────
+// KHÔNG dùng position:fixed trên body (gây lệch tọa độ click iOS).
+// KHÔNG dùng _isKeyboardOpen() (false positive kẹt body.acct-open → tab-nav bị block).
+// Chỉ dùng: overflow:hidden trên html + guard thời gian + e.target===backdrop.
 var _sheetOpenTime = 0;
-var _savedScrollY = 0;
-
-function _lockBody() {
-  _savedScrollY = window.scrollY || 0;
-  document.body.style.position = 'fixed';
-  document.body.style.top = '-' + _savedScrollY + 'px';
-  document.body.style.width = '100%';
-}
-function _unlockBody() {
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.width = '';
-  window.scrollTo(0, _savedScrollY);
-}
-
-// True when iOS on-screen keyboard is covering part of the viewport
-function _isKeyboardOpen() {
-  if (!window.visualViewport) return false;
-  return window.visualViewport.height < window.innerHeight * 0.8;
-}
 
 function _setSheetOpen(open) {
   var backdrop = document.getElementById('acct-backdrop');
@@ -2179,11 +2162,11 @@ function _setSheetOpen(open) {
     _sheetOpenTime = Date.now();
     backdrop.classList.add('open');
     document.body.classList.add('acct-open');
-    _lockBody();
+    document.documentElement.style.overflow = 'hidden';
   } else {
     backdrop.classList.remove('open');
     document.body.classList.remove('acct-open');
-    _unlockBody();
+    document.documentElement.style.overflow = '';
   }
 }
 
@@ -2204,31 +2187,29 @@ function toggleAccountSheet() {
   }
 }
 
+// closeAccountSheet: chỉ guard 400ms chống phantom click ngay sau mở.
+// e.target===backdrop đã đủ chặn phantom click iOS (phantom click luôn target element được chạm, không target backdrop).
 function closeAccountSheet() {
-  // iOS guard 1: don't close if keyboard is open (phantom click from keyboard appear)
-  if (_isKeyboardOpen()) return;
-  // iOS guard 2: ignore events within 1.5s of opening
-  if (Date.now() - _sheetOpenTime < 1500) return;
+  if (Date.now() - _sheetOpenTime < 400) return;
   _setSheetOpen(false);
 }
-// Explicit close — always works (✕ button, logout)
+// Luôn đóng — dùng cho nút ✕ và sau khi đăng nhập thành công
 function forceCloseAccountSheet() {
   _setSheetOpen(false);
 }
 
-// Backdrop tap-to-close: listen directly on backdrop, require start+end both on backdrop
-// No stopPropagation on sheet — e.target check is sufficient and stopPropagation breaks iOS touch→click synthesis
+// Backdrop tap-to-close: touchstart+touchend phải cùng trên backdrop
 (function() {
   function _setup() {
     var backdrop = document.getElementById('acct-backdrop');
     if (!backdrop) return;
-    var _touchStartedOnBackdrop = false;
+    var _tsbOnBackdrop = false;
     backdrop.addEventListener('touchstart', function(e) {
-      _touchStartedOnBackdrop = (e.target === backdrop);
+      _tsbOnBackdrop = (e.target === backdrop);
     }, {passive: true});
     backdrop.addEventListener('touchend', function(e) {
-      if (_touchStartedOnBackdrop && e.target === backdrop) closeAccountSheet();
-      _touchStartedOnBackdrop = false;
+      if (_tsbOnBackdrop && e.target === backdrop) closeAccountSheet();
+      _tsbOnBackdrop = false;
     }, {passive: true});
     backdrop.addEventListener('click', function(e) {
       if (e.target === backdrop) closeAccountSheet();
@@ -2256,7 +2237,7 @@ async function doLoginSheet() {
       if (studentEl && j.student_id) studentEl.value = j.student_id;
       var cpUser = document.getElementById('cp-username');
       if (cpUser) cpUser.value = username;
-      setTimeout(closeAccountSheet, 600);
+      setTimeout(forceCloseAccountSheet, 800);
     } else {
       if (msg) { msg.style.color='#ef4444'; msg.textContent='❌ ' + (j.detail || 'Sai tài khoản hoặc mật khẩu'); }
     }
@@ -2281,7 +2262,7 @@ async function doLoginSheet() {
       bar.classList.remove('hidden');
     } else if (cur > _lastY + 5) {
       bar.classList.add('hidden');
-      closeAccountSheet();
+      forceCloseAccountSheet();
     } else if (cur < _lastY - 5) {
       bar.classList.remove('hidden');
     }
