@@ -1038,7 +1038,14 @@ def web_demo() -> HTMLResponse:
           <button class="vision-mode-btn active" data-mode="detail" onclick="setVisionMode('detail')" title="Mô tả đầy đủ chi tiết">📖 Chi tiết</button>
           <button class="vision-mode-btn" data-mode="quick" onclick="setVisionMode('quick')" title="Tóm tắt nhanh 2-3 câu">⚡ Nhanh</button>
         </div>
-        <input id="visionFile" type="file" accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh hình vẽ cần mô tả"/>
+        <input id="visionFile" type="file" accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh hình vẽ cần mô tả" onchange="onVisionFileChange(this)"/>
+        <div id="vision-preview-wrap" style="display:none;margin:8px 0;padding:10px;background:var(--soft);border-radius:10px;border:1px solid var(--line);display:none;align-items:center;gap:12px">
+          <img id="vision-preview-img" src="" alt="Xem trước ảnh" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex-shrink:0"/>
+          <div style="min-width:0">
+            <p id="vision-preview-name" style="margin:0;font-size:14px;font-weight:600;color:var(--ink);word-break:break-all"></p>
+            <p id="vision-preview-size" style="margin:4px 0 0;font-size:13px;color:var(--muted)"></p>
+          </div>
+        </div>
         <div class="actions">
           <button class="btn" onclick="describeImage()" id="btn-vision">📸 Mô tả hình</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak-vision">🔊 Đọc kết quả</button>
@@ -1046,8 +1053,17 @@ def web_demo() -> HTMLResponse:
         <!-- Hỏi thêm sau khi đã mô tả -->
         <div class="vision-followup" id="vision-followup">
           <p style="margin:0 0 8px;font-weight:600;font-size:14px;color:var(--blue)">💬 Hỏi thêm về hình này</p>
-          <input type="text" id="vision-followup-input" placeholder="Ví dụ: Điểm A nằm ở đâu? Góc ở góc phải là bao nhiêu độ?" aria-label="Câu hỏi bổ sung về hình vẽ" onkeydown="if(event.key==='Enter')askVisionFollowup()"/>
-          <button class="btn" onclick="askVisionFollowup()" style="width:100%">💬 Gửi câu hỏi</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="vision-followup-input" placeholder="Ví dụ: Điểm A nằm ở đâu? Góc bên phải bao nhiêu độ?" aria-label="Câu hỏi bổ sung về hình vẽ" onkeydown="if(event.key==='Enter')askVisionFollowup()" style="flex:1"/>
+            <button onclick="toggleFollowupMic()" id="btn-followup-mic" title="Nhập bằng giọng nói" aria-label="Nhập câu hỏi bằng giọng nói"
+              style="border:none;background:#1565C0;color:#fff;border-radius:8px;padding:10px 14px;font-size:18px;cursor:pointer;flex-shrink:0;min-height:44px">🎙</button>
+          </div>
+          <button class="btn" onclick="askVisionFollowup()" style="width:100%;margin-top:4px">💬 Gửi câu hỏi</button>
+        </div>
+        <!-- Lịch sử mô tả -->
+        <div id="vision-history-wrap" style="display:none;margin-top:12px">
+          <button onclick="toggleVisionHistory()" style="border:none;background:none;padding:0;font-size:14px;color:var(--muted);cursor:pointer;font-weight:600" id="btn-vision-hist">🕐 Lịch sử mô tả ▾</button>
+          <div id="vision-history-list" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
         </div>
       </div>
       </div><!-- /pane-tools -->
@@ -1331,11 +1347,39 @@ function hideLoading() {
   playBeep(660, 0.15, 0.12);
 }
 
+function _friendlyError(raw) {
+  var msg = (raw || '').toLowerCase();
+  if (LANG === 'vi') {
+    if (msg.includes('api key') || msg.includes('authentication') || msg.includes('gemini_api'))
+      return 'Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau ít phút.';
+    if (msg.includes('quota') || msg.includes('credit') || msg.includes('depleted') || msg.includes('limit'))
+      return 'Hạn mức AI đã hết. Vui lòng liên hệ quản trị viên.';
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') || msg.includes('networkerror'))
+      return 'Mất kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
+    if (msg.includes('timeout') || msg.includes('timed out'))
+      return 'Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại sau.';
+    if (msg.includes('502') || msg.includes('503') || msg.includes('bad gateway'))
+      return 'Máy chủ AI đang bận. Vui lòng thử lại sau 30 giây.';
+    if (msg.includes('file') || msg.includes('image') || msg.includes('upload'))
+      return 'Không đọc được file. Vui lòng thử ảnh khác (JPG, PNG, WEBP).';
+    return raw || 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.';
+  } else {
+    if (msg.includes('api key') || msg.includes('authentication')) return 'AI service temporarily unavailable. Please try again in a moment.';
+    if (msg.includes('quota') || msg.includes('credit') || msg.includes('limit')) return 'AI usage limit reached. Please contact admin.';
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) return 'Network error. Please check your connection and try again.';
+    if (msg.includes('timeout')) return 'Request timed out. Please try again.';
+    if (msg.includes('502') || msg.includes('503')) return 'AI server is busy. Please try again in 30 seconds.';
+    if (msg.includes('file') || msg.includes('image')) return 'Could not read file. Please try another image (JPG, PNG, WEBP).';
+    return raw || 'Could not process your request. Please try again.';
+  }
+}
+
 function displayError(message) {
-  const fallback = LANG === 'vi' ? 'Không thể xử lý yêu cầu lúc này.' : 'The request could not be processed right now.';
+  var friendly = _friendlyError(message);
   var el = document.getElementById('result');
-  if (el) el.innerHTML = '<div class="result-chunk" style="border:2px solid #dc2626"><div class="chunk-body" style="color:#fca5a5">' +
-    esc((LANG === 'vi' ? 'Lỗi: ' : 'Error: ') + (message || fallback)) + '</div></div>';
+  if (el) el.innerHTML = '<div class="result-chunk" style="border:2px solid #dc2626"><div class="chunk-body" style="color:#fca5a5;font-size:16px;line-height:1.6">' +
+    '<span style="font-size:22px">⚠️</span> ' + esc(friendly) + '</div></div>';
+  announce(friendly);
   playBeep(220, 0.3, 0.15);
 }
 
@@ -1760,6 +1804,44 @@ async function toggleMic() {
   }
 }
 
+// Mic cho followup input — dùng lại _mediaRec, ghi vào #vision-followup-input
+let _followupRec = null, _followupChunks = [];
+async function toggleFollowupMic() {
+  var btn = document.getElementById('btn-followup-mic');
+  if (_followupRec && _followupRec.state === 'recording') {
+    _followupRec.stop();
+    if (btn) { btn.textContent = '🎙'; btn.style.background = '#1565C0'; }
+    return;
+  }
+  try {
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _followupRec = new MediaRecorder(stream);
+    _followupChunks = [];
+    _followupRec.ondataavailable = function(e) { _followupChunks.push(e.data); };
+    _followupRec.onstop = async function() {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      var blob = new Blob(_followupChunks, { type: 'audio/webm' });
+      var fd = new FormData();
+      fd.append('file', blob, 'speech.webm');
+      fd.append('language', LANG);
+      if (btn) btn.textContent = '⌛';
+      try {
+        var r = await fetch('/stt', { method: 'POST', body: fd });
+        var j = await r.json();
+        var inp = document.getElementById('vision-followup-input');
+        if (j.text && inp) { inp.value = j.text; inp.focus(); }
+        if (btn) { btn.textContent = '✅'; setTimeout(function(){ btn.textContent = '🎙'; }, 2000); }
+      } catch(e) {
+        if (btn) { btn.textContent = '❌'; setTimeout(function(){ btn.textContent = '🎙'; }, 2000); }
+      }
+    };
+    _followupRec.start();
+    if (btn) { btn.textContent = '⏹'; btn.style.background = '#dc2626'; }
+  } catch(e) {
+    alert('Không thể mở micro: ' + e.message);
+  }
+}
+
 // ── BRAILLE COPY ───────────────────────────────────────────────────────────
 let _lastBraille = '';
 
@@ -1846,6 +1928,28 @@ function setVisionMode(mode) {
     : (mode === 'quick' ? 'Quick description mode' : 'Detailed description mode'));
 }
 
+function onVisionFileChange(input) {
+  var wrap = document.getElementById('vision-preview-wrap');
+  var img = document.getElementById('vision-preview-img');
+  var nameEl = document.getElementById('vision-preview-name');
+  var sizeEl = document.getElementById('vision-preview-size');
+  if (!input.files || !input.files.length) {
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+  var file = input.files[0];
+  if (wrap) wrap.style.display = 'flex';
+  if (nameEl) nameEl.textContent = file.name;
+  if (sizeEl) sizeEl.textContent = (file.size / 1024).toFixed(1) + ' KB';
+  if (img) {
+    var reader = new FileReader();
+    reader.onload = function(e) { img.src = e.target.result; };
+    reader.readAsDataURL(file);
+  }
+  // Đọc to tên file cho người dùng khiếm thị
+  announce(LANG === 'vi' ? ('Đã chọn ảnh: ' + file.name) : ('Image selected: ' + file.name));
+}
+
 async function describeImage() {
   const input = document.getElementById('visionFile');
   if (!input || !input.files.length) {
@@ -1869,6 +1973,8 @@ async function describeImage() {
     if (fu) fu.classList.add('show');
     var fuInput = document.getElementById('vision-followup-input');
     if (fuInput) fuInput.value = '';
+    // Save to history
+    _pushVisionHistory(_lastVisionFile ? _lastVisionFile.name : '', text);
   } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
@@ -1897,6 +2003,61 @@ async function askVisionFollowup() {
   } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
+
+// ── VISION HISTORY ────────────────────────────────────────────────────────────
+var _VISION_HIST_KEY = 'ev_vision_hist';
+var _visionHistOpen = false;
+
+function _loadVisionHistory() {
+  try { return JSON.parse(localStorage.getItem(_VISION_HIST_KEY) || '[]'); } catch(e) { return []; }
+}
+function _saveVisionHistory(items) {
+  try { localStorage.setItem(_VISION_HIST_KEY, JSON.stringify(items.slice(0, 5))); } catch(e) {}
+}
+function _pushVisionHistory(filename, preview) {
+  var items = _loadVisionHistory();
+  items.unshift({ ts: Date.now(), file: filename || 'ảnh', text: preview });
+  _saveVisionHistory(items);
+  _renderVisionHistory();
+  var wrap = document.getElementById('vision-history-wrap');
+  if (wrap) wrap.style.display = 'block';
+}
+function _renderVisionHistory() {
+  var list = document.getElementById('vision-history-list');
+  if (!list) return;
+  var items = _loadVisionHistory();
+  if (!items.length) { list.innerHTML = '<p style="color:var(--muted);font-size:13px">Chưa có lịch sử.</p>'; return; }
+  list.innerHTML = items.map(function(item, i) {
+    var date = new Date(item.ts);
+    var label = date.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' — ' + esc(item.file);
+    var preview = esc((item.text || '').slice(0, 120)) + (item.text && item.text.length > 120 ? '...' : '');
+    return '<div onclick="loadVisionHistItem(' + i + ')" role="button" tabindex="0" style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px" onkeydown="if(event.key===\'Enter\'||event.key===\' \')loadVisionHistItem(' + i + ')">' +
+      '<div style="font-weight:700;color:var(--blue);margin-bottom:3px">' + label + '</div>' +
+      '<div style="color:var(--muted);line-height:1.4">' + preview + '</div></div>';
+  }).join('');
+}
+function loadVisionHistItem(idx) {
+  var items = _loadVisionHistory();
+  if (!items[idx]) return;
+  setResult(items[idx].text || '');
+  announce(LANG === 'vi' ? 'Đã tải lại kết quả cũ' : 'Previous result loaded');
+}
+function toggleVisionHistory() {
+  _visionHistOpen = !_visionHistOpen;
+  var list = document.getElementById('vision-history-list');
+  var btn = document.getElementById('btn-vision-hist');
+  if (list) list.style.display = _visionHistOpen ? 'flex' : 'none';
+  if (btn) btn.textContent = (_visionHistOpen ? '🕐 Lịch sử mô tả ▴' : '🕐 Lịch sử mô tả ▾');
+  if (_visionHistOpen) _renderVisionHistory();
+}
+// Khởi động: khôi phục history nếu đã có
+(function() {
+  var items = _loadVisionHistory();
+  if (items.length) {
+    var wrap = document.getElementById('vision-history-wrap');
+    if (wrap) wrap.style.display = 'block';
+  }
+})();
 
 // ── LOGIN MODAL ───────────────────────────────────────────────────────────────
 function openLoginModal() {
@@ -1988,7 +2149,7 @@ function _updateAuthBar(username) {
   }
 }
 
-// Account sheet
+// ── ACCOUNT SHEET (iOS-safe) ──────────────────────────────────────────────────
 var _sheetOpenTime = 0;
 var _savedScrollY = 0;
 
@@ -2003,6 +2164,12 @@ function _unlockBody() {
   document.body.style.top = '';
   document.body.style.width = '';
   window.scrollTo(0, _savedScrollY);
+}
+
+// True when iOS on-screen keyboard is covering part of the viewport
+function _isKeyboardOpen() {
+  if (!window.visualViewport) return false;
+  return window.visualViewport.height < window.innerHeight * 0.8;
 }
 
 function _setSheetOpen(open) {
@@ -2038,35 +2205,46 @@ function toggleAccountSheet() {
 }
 
 function closeAccountSheet() {
-  // Guard: ignore close calls within 2s of opening (iOS phantom clicks from keyboard opening)
-  if (Date.now() - _sheetOpenTime < 2000) return;
+  // iOS guard 1: don't close if keyboard is open (phantom click from keyboard appear)
+  if (_isKeyboardOpen()) return;
+  // iOS guard 2: ignore events within 1.5s of opening
+  if (Date.now() - _sheetOpenTime < 1500) return;
   _setSheetOpen(false);
 }
-// Explicit close — always works (from the ✕ button inside modal)
+// Explicit close — always works (✕ button, logout)
 function forceCloseAccountSheet() {
   _setSheetOpen(false);
 }
 
-// Backdrop tap-to-close: only close if tap started AND ended on backdrop (not sheet)
+// Attach backdrop tap-to-close DIRECTLY on the backdrop element (not document)
+// This avoids iOS synthetic click events that fire at wrong targets
 (function() {
-  var _tapOnBackdrop = false;
-  document.addEventListener('touchstart', function(e) {
+  function _setup() {
     var backdrop = document.getElementById('acct-backdrop');
-    _tapOnBackdrop = backdrop && backdrop.classList.contains('open') && e.target === backdrop;
-  }, {passive: true});
-  document.addEventListener('touchend', function(e) {
-    if (_tapOnBackdrop && e.target === document.getElementById('acct-backdrop')) {
-      closeAccountSheet();
-    }
-    _tapOnBackdrop = false;
-  }, {passive: true});
-  // Desktop click on backdrop
-  document.addEventListener('click', function(e) {
-    var backdrop = document.getElementById('acct-backdrop');
-    if (backdrop && backdrop.classList.contains('open') && e.target === backdrop) {
-      closeAccountSheet();
-    }
-  });
+    var sheet = document.getElementById('acct-sheet');
+    if (!backdrop || !sheet) return;
+
+    // Sheet: stop all pointer events from bubbling to backdrop
+    ['click','touchstart','touchend','touchmove'].forEach(function(evt) {
+      sheet.addEventListener(evt, function(e) { e.stopPropagation(); }, {passive: evt !== 'click'});
+    });
+
+    // Backdrop: tap-to-close — must start AND end on backdrop itself
+    var _touchStartedOnBackdrop = false;
+    backdrop.addEventListener('touchstart', function(e) {
+      _touchStartedOnBackdrop = (e.target === backdrop);
+    }, {passive: true});
+    backdrop.addEventListener('touchend', function(e) {
+      if (_touchStartedOnBackdrop && e.target === backdrop) closeAccountSheet();
+      _touchStartedOnBackdrop = false;
+    }, {passive: true});
+    // Desktop mouse click on backdrop
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === backdrop) closeAccountSheet();
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _setup);
+  else _setup();
 })();
 
 async function doLoginSheet() {
