@@ -2031,10 +2031,15 @@ function _renderVisionHistory() {
     var date = new Date(item.ts);
     var label = date.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' — ' + esc(item.file);
     var preview = esc((item.text || '').slice(0, 120)) + (item.text && item.text.length > 120 ? '...' : '');
-    return '<div onclick="loadVisionHistItem(' + i + ')" role="button" tabindex="0" style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px" onkeydown="if(event.key===\'Enter\'||event.key===\' \')loadVisionHistItem(' + i + ')">' +
+    return '<div data-hist-idx="' + i + '" role="button" tabindex="0" style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px">' +
       '<div style="font-weight:700;color:var(--blue);margin-bottom:3px">' + label + '</div>' +
       '<div style="color:var(--muted);line-height:1.4">' + preview + '</div></div>';
   }).join('');
+  list.querySelectorAll('[data-hist-idx]').forEach(function(el) {
+    var idx = parseInt(el.getAttribute('data-hist-idx'), 10);
+    el.addEventListener('click', function() { loadVisionHistItem(idx); });
+    el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') loadVisionHistItem(idx); });
+  });
 }
 function loadVisionHistItem(idx) {
   var items = _loadVisionHistory();
