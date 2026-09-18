@@ -2216,20 +2216,12 @@ function forceCloseAccountSheet() {
   _setSheetOpen(false);
 }
 
-// Attach backdrop tap-to-close DIRECTLY on the backdrop element (not document)
-// This avoids iOS synthetic click events that fire at wrong targets
+// Backdrop tap-to-close: listen directly on backdrop, require start+end both on backdrop
+// No stopPropagation on sheet — e.target check is sufficient and stopPropagation breaks iOS touch→click synthesis
 (function() {
   function _setup() {
     var backdrop = document.getElementById('acct-backdrop');
-    var sheet = document.getElementById('acct-sheet');
-    if (!backdrop || !sheet) return;
-
-    // Sheet: stop all pointer events from bubbling to backdrop
-    ['click','touchstart','touchend','touchmove'].forEach(function(evt) {
-      sheet.addEventListener(evt, function(e) { e.stopPropagation(); }, {passive: evt !== 'click'});
-    });
-
-    // Backdrop: tap-to-close — must start AND end on backdrop itself
+    if (!backdrop) return;
     var _touchStartedOnBackdrop = false;
     backdrop.addEventListener('touchstart', function(e) {
       _touchStartedOnBackdrop = (e.target === backdrop);
@@ -2238,7 +2230,6 @@ function forceCloseAccountSheet() {
       if (_touchStartedOnBackdrop && e.target === backdrop) closeAccountSheet();
       _touchStartedOnBackdrop = false;
     }, {passive: true});
-    // Desktop mouse click on backdrop
     backdrop.addEventListener('click', function(e) {
       if (e.target === backdrop) closeAccountSheet();
     });
