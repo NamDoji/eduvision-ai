@@ -776,6 +776,7 @@ def web_demo() -> HTMLResponse:
     body.lv-mode .subj-btn{font-size:15px;min-height:72px;gap:6px}
     body.lv-mode .subj-icon{font-size:26px}
     @media(max-width:560px){.subject-grid{grid-template-columns:repeat(3,1fr);gap:6px}.subj-btn{padding:10px 4px;min-height:68px;font-size:12px}.subj-btn .subj-icon{font-size:22px}}
+    @media(min-width:901px){.subject-grid{grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}.subj-btn{min-height:96px;font-size:15px;padding:16px 8px}.subj-btn .subj-icon{font-size:32px}}
     /* ── SUGGESTIONS ── */
     .suggestions-wrap{margin:10px 0 6px;background:var(--soft);border-radius:10px;padding:10px 12px;border:1px solid var(--line)}
     .suggestions-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
@@ -913,44 +914,40 @@ def web_demo() -> HTMLResponse:
       <!-- AI TUTOR -->
       <div class="card">
         <h2 id="tutor-title">🤖 AI Gia sư — Trợ lý học tập người khiếm thị</h2>
-        <div class="row2">
-          <div>
-            <label id="lbl-subject" style="margin-bottom:8px">Môn học</label>
-            <select id="subject" style="display:none" aria-hidden="true">
-              <option value="geometry" id="opt-geo">Hình học</option>
-              <option value="english" id="opt-eng">Tiếng Anh</option>
-              <option value="general" id="opt-gen">Tổng hợp</option>
-              <option value="math">Toán học</option>
-              <option value="science">Khoa học</option>
-              <option value="history">Lịch sử</option>
-            </select>
-            <div class="subject-grid" role="group" aria-label="Chọn môn học">
-              <button class="subj-btn active" data-subject="geometry" onclick="selectSubject('geometry',this)" aria-pressed="true">
-                <span class="subj-icon">📐</span><span id="opt-geo">Hình học</span>
-              </button>
-              <button class="subj-btn" data-subject="english" onclick="selectSubject('english',this)" aria-pressed="false">
-                <span class="subj-icon">🗣</span><span id="opt-eng">Tiếng Anh</span>
-              </button>
-              <button class="subj-btn" data-subject="math" onclick="selectSubject('math',this)" aria-pressed="false">
-                <span class="subj-icon">🔢</span><span id="opt-math">Toán học</span>
-              </button>
-              <button class="subj-btn" data-subject="science" onclick="selectSubject('science',this)" aria-pressed="false">
-                <span class="subj-icon">🔬</span><span id="opt-sci">Khoa học</span>
-              </button>
-              <button class="subj-btn" data-subject="history" onclick="selectSubject('history',this)" aria-pressed="false">
-                <span class="subj-icon">📖</span><span id="opt-hist">Lịch sử</span>
-              </button>
-              <button class="subj-btn" data-subject="general" onclick="selectSubject('general',this)" aria-pressed="false">
-                <span class="subj-icon">🌐</span><span id="opt-gen">Tổng hợp</span>
-              </button>
-            </div>
-            <!-- Câu gợi ý theo môn -->
-            <div class="suggestions-wrap" id="suggestions-wrap">
-              <div class="suggestions-label">Câu hỏi gợi ý:</div>
-              <div class="suggestions-row" id="suggestions-row"></div>
-            </div>
-          </div>
-          <input id="student" type="hidden" value="S001"/>
+        <input id="student" type="hidden" value="S001"/>
+        <label id="lbl-subject" style="margin-bottom:8px">Môn học</label>
+        <select id="subject" style="display:none" aria-hidden="true">
+          <option value="geometry" id="opt-geo">Hình học</option>
+          <option value="english" id="opt-eng">Tiếng Anh</option>
+          <option value="general" id="opt-gen">Tổng hợp</option>
+          <option value="math">Toán học</option>
+          <option value="science">Khoa học</option>
+          <option value="history">Lịch sử</option>
+        </select>
+        <div class="subject-grid" role="group" aria-label="Chọn môn học">
+          <button class="subj-btn active" data-subject="geometry" onclick="selectSubject('geometry',this)" aria-pressed="true">
+            <span class="subj-icon">📐</span><span id="opt-geo">Hình học</span>
+          </button>
+          <button class="subj-btn" data-subject="english" onclick="selectSubject('english',this)" aria-pressed="false">
+            <span class="subj-icon">🗣</span><span id="opt-eng">Tiếng Anh</span>
+          </button>
+          <button class="subj-btn" data-subject="math" onclick="selectSubject('math',this)" aria-pressed="false">
+            <span class="subj-icon">🔢</span><span id="opt-math">Toán học</span>
+          </button>
+          <button class="subj-btn" data-subject="science" onclick="selectSubject('science',this)" aria-pressed="false">
+            <span class="subj-icon">🔬</span><span id="opt-sci">Khoa học</span>
+          </button>
+          <button class="subj-btn" data-subject="history" onclick="selectSubject('history',this)" aria-pressed="false">
+            <span class="subj-icon">📖</span><span id="opt-hist">Lịch sử</span>
+          </button>
+          <button class="subj-btn" data-subject="general" onclick="selectSubject('general',this)" aria-pressed="false">
+            <span class="subj-icon">🌐</span><span id="opt-gen">Tổng hợp</span>
+          </button>
+        </div>
+        <!-- Câu gợi ý theo môn -->
+        <div class="suggestions-wrap" id="suggestions-wrap">
+          <div class="suggestions-label">Câu hỏi gợi ý:</div>
+          <div class="suggestions-row" id="suggestions-row"></div>
         </div>
         <label for="question" id="lbl-question">Câu hỏi</label>
         <textarea id="question" placeholder="Nhập câu hỏi của bạn..."></textarea>
