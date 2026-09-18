@@ -2208,21 +2208,33 @@ document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') _setSheetOpen(false);
 });
 
-// Backdrop tap-to-close: touchstart+touchend phải cùng trên backdrop
+// Backdrop tap-to-close: touchstart+touchend phải cùng trên backdrop.
+// _touchInsideSheet: nếu touch bắt đầu trong sheet → block backdrop click 600ms
+// (tránh iOS keyboard-reflow coordinate shift: tap input → keyboard → viewport shift → click trượt lên backdrop)
 (function() {
   function _setup() {
     var backdrop = document.getElementById('acct-backdrop');
+    var sheet = document.getElementById('acct-sheet');
     if (!backdrop) return;
     var _tsbOnBackdrop = false;
+    var _touchInsideSheet = false;
+    var _touchInsideTimer = null;
+    if (sheet) {
+      sheet.addEventListener('touchstart', function() {
+        _touchInsideSheet = true;
+        clearTimeout(_touchInsideTimer);
+        _touchInsideTimer = setTimeout(function() { _touchInsideSheet = false; }, 600);
+      }, {passive: true});
+    }
     backdrop.addEventListener('touchstart', function(e) {
       _tsbOnBackdrop = (e.target === backdrop);
     }, {passive: true});
     backdrop.addEventListener('touchend', function(e) {
-      if (_tsbOnBackdrop && e.target === backdrop) closeAccountSheet();
+      if (!_touchInsideSheet && _tsbOnBackdrop && e.target === backdrop) closeAccountSheet();
       _tsbOnBackdrop = false;
     }, {passive: true});
     backdrop.addEventListener('click', function(e) {
-      if (e.target === backdrop) closeAccountSheet();
+      if (!_touchInsideSheet && e.target === backdrop) closeAccountSheet();
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _setup);
