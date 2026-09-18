@@ -657,7 +657,7 @@ def web_demo() -> HTMLResponse:
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  <meta name="theme-color" content="#c41230"/>
+  <meta name="theme-color" content="#2563EB"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
   <meta name="apple-mobile-web-app-title" content="EduVision AI"/>
@@ -665,7 +665,7 @@ def web_demo() -> HTMLResponse:
   <link rel="manifest" href="/manifest.json"/>
   <title>EduVision AI</title>
   <style>
-    :root{--red:#c41230;--blue:#12355b;--ink:#172033;--muted:#4a5568;--line:#d9e2ef;--soft:#f6f8fb;--panel:#fff;font-family:Inter,Arial,sans-serif}
+    :root{--red:#2563EB;--blue:#1E3A8A;--ink:#0F172A;--muted:#475569;--line:#CBD5E1;--soft:#F1F5F9;--panel:#fff;font-family:Inter,Arial,sans-serif}
     *{box-sizing:border-box}
     body{margin:0;background:var(--soft);color:var(--ink);overflow-x:hidden;font-size:18px}
     /* ── BRAND BAR (auto-hide on scroll) ── */
@@ -699,8 +699,8 @@ def web_demo() -> HTMLResponse:
     textarea{min-height:110px;resize:vertical}
     textarea:focus,input:focus,select:focus{outline:none;border-color:var(--blue)}
     .btn{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:12px 18px;border:0;border-radius:8px;background:var(--red);color:#fff;font-weight:700;font-size:16px;cursor:pointer;transition:background 0.15s;font-family:inherit}
-    .btn:hover{background:#a50f28}
-    .btn.blue{background:var(--blue)}.btn.blue:hover{background:#0e2740}
+    .btn:hover{background:#1D4ED8}
+    .btn.blue{background:var(--blue)}.btn.blue:hover{background:#1e3a8a}
     .btn.ghost{background:#eef3f8;color:var(--blue);border:1px solid var(--line)}.btn.ghost:hover{background:#dce6f0}
     .btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     .btn:disabled{opacity:0.5;cursor:not-allowed}
@@ -770,7 +770,7 @@ def web_demo() -> HTMLResponse:
     .subj-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 6px;border:2px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);min-height:76px;transition:all .18s cubic-bezier(.4,0,.2,1);line-height:1.2;text-align:center;-webkit-tap-highlight-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,.06)}
     .subj-btn .subj-icon{font-size:26px;line-height:1;display:block}
     .subj-btn:hover{background:var(--soft);border-color:var(--blue);transform:translateY(-2px);box-shadow:0 4px 12px rgba(18,53,91,.15)}
-    .subj-btn.active{background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border-color:#1565C0;box-shadow:0 4px 14px rgba(18,53,91,.35);transform:translateY(-1px)}
+    .subj-btn.active{background:linear-gradient(135deg,#2563EB,#4F46E5);color:#fff;border-color:#2563EB;box-shadow:0 4px 14px rgba(37,99,235,.35);transform:translateY(-1px)}
     .subj-btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     .subj-icon{font-size:22px;line-height:1}
     body.lv-mode .subj-btn{font-size:15px;min-height:72px;gap:6px}
@@ -782,8 +782,8 @@ def web_demo() -> HTMLResponse:
     .suggestions-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
     .suggestions-label{font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
     .suggestions-row{display:flex;flex-wrap:wrap;gap:8px}
-    .suggestion-chip{padding:7px 14px;border:1.5px solid #1565C0;border-radius:20px;background:#EFF6FF;font-size:13px;color:#1565C0;cursor:pointer;transition:all .15s;min-height:36px;line-height:1.3;text-align:left;font-weight:500}
-    .suggestion-chip:hover{background:#1565C0;color:#fff;border-color:#1565C0;transform:translateY(-1px);box-shadow:0 2px 8px rgba(18,53,91,.2)}
+    .suggestion-chip{padding:7px 14px;border:1.5px solid #2563EB;border-radius:20px;background:#EFF6FF;font-size:13px;color:#2563EB;cursor:pointer;transition:all .15s;min-height:36px;line-height:1.3;text-align:left;font-weight:500}
+    .suggestion-chip:hover{background:#2563EB;color:#fff;border-color:#2563EB;transform:translateY(-1px);box-shadow:0 2px 8px rgba(18,53,91,.2)}
     .suggestion-chip:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     /* ── HISTORY ── */
     .hist-wrap{margin:4px 0 10px}
@@ -798,7 +798,7 @@ def web_demo() -> HTMLResponse:
     .result-chunk{background:#111827;color:#e8eef8;border-radius:10px;padding:16px;line-height:1.6;word-break:break-word;font-size:14px}
     .result-chunk.empty-state{background:transparent;border:none;padding:0;min-height:unset}
     /* Desktop hero banner */
-    .desktop-hero{display:none;background:linear-gradient(135deg,#0d2b5e 0%,#12355b 50%,#1a4a7a 100%);color:#fff;border-radius:16px;padding:36px 40px;margin-bottom:20px;position:relative;overflow:hidden}
+    .desktop-hero{display:none;background:linear-gradient(135deg,#1E1B4B 0%,#1E3A8A 45%,#2563EB 100%);color:#fff;border-radius:16px;padding:36px 40px;margin-bottom:20px;position:relative;overflow:hidden}
     .desktop-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:220px;height:220px;background:rgba(255,255,255,0.04);border-radius:50%}
     .desktop-hero::after{content:'';position:absolute;bottom:-60px;right:60px;width:160px;height:160px;background:rgba(255,255,255,0.03);border-radius:50%}
     .desktop-hero h1{font-size:28px;font-weight:900;color:#fff;margin:0 0 8px;line-height:1.2}
@@ -809,7 +809,7 @@ def web_demo() -> HTMLResponse:
     /* Welcome panel (right col empty state) */
     .welcome-panel{padding:8px 0}
     .welcome-panel .wp-card{background:#f0f5ff;border:1.5px solid #c7d8f5;border-radius:14px;padding:22px;margin-bottom:14px}
-    .welcome-panel .wp-card h3{margin:0 0 14px;font-size:17px;color:#12355b;font-weight:800}
+    .welcome-panel .wp-card h3{margin:0 0 14px;font-size:17px;color:#1E3A8A;font-weight:800}
     .welcome-panel .wp-feat{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;font-size:15px;line-height:1.4}
     .welcome-panel .wp-feat:last-child{margin-bottom:0}
     .welcome-panel .wp-icon{font-size:22px;flex-shrink:0;margin-top:1px}
@@ -872,7 +872,7 @@ def web_demo() -> HTMLResponse:
 </head>
 <body>
 <a href="#main-content" class="skip-link"
-  style="position:absolute;left:-9999px;top:4px;z-index:9999;background:#12355b;color:#fff;padding:8px 16px;border-radius:8px;font-weight:700;text-decoration:none;"
+  style="position:absolute;left:-9999px;top:4px;z-index:9999;background:#1E3A8A;color:#fff;padding:8px 16px;border-radius:8px;font-weight:700;text-decoration:none;"
   onfocus="this.style.left='12px'" onblur="this.style.left='-9999px'">Bỏ qua điều hướng — Skip to content</a>
 <div id="loading-bar"></div>
 
