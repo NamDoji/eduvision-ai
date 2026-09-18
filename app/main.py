@@ -2979,61 +2979,59 @@ async def describe_image(
     file: UploadFile = File(...),
     language: str = Form(default="vi"),
 ) -> Dict[str, Any]:
-    """Mô tả hình vẽ toán học bằng AI Vision (Groq Llama 4 Scout) cho học sinh khiếm thị."""
-    groq_key = os.getenv("GROQ_API_KEY", "")
-    if not groq_key:
-        raise HTTPException(status_code=503, detail="GROQ_API_KEY chưa được cấu hình")
+    """Mô tả hình vẽ toán học bằng Gemini Vision cho học sinh khiếm thị."""
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if not gemini_key:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY chưa được cấu hình")
 
     img_bytes = await file.read()
     b64 = base64.b64encode(img_bytes).decode()
     mime = file.content_type or "image/jpeg"
 
     if language == "vi":
-        system = "Bạn là trợ lý giáo dục cho học sinh khiếm thị. Mô tả hình ảnh bằng ngôn ngữ xúc giác và mô tả không gian, không dùng từ 'nhìn'."
         prompt = (
+            "Bạn là trợ lý giáo dục cho học sinh khiếm thị. "
             "Đây là hình vẽ từ bài toán hoặc tài liệu học tập. "
-            "Mô tả chi tiết bằng lời cho học sinh khiếm thị: hình dạng, điểm, đoạn thẳng, góc, số liệu, kích thước, vị trí tương đối. "
+            "Mô tả chi tiết bằng lời: hình dạng, điểm, đoạn thẳng, góc, số liệu, kích thước, vị trí tương đối. "
             "Không dùng 'nhìn vào hình' hay 'như hình vẽ' — thay bằng ngôn ngữ xúc giác và mô tả không gian (trái/phải/trên/dưới)."
         )
     else:
-        system = "You are an accessible math educator. Describe visual content verbally for blind and low-vision students using tactile, spatial language."
         prompt = (
+            "You are an accessible math educator for visually impaired students. "
             "This is a figure from a math problem or study material. "
-            "Describe it in detail for a visually impaired student: shapes, points, segments, angles, measurements, relative positions. "
-            "Do not say 'look at the figure' — use tactile and spatial language (left/right/above/below) instead."
+            "Describe it in detail: shapes, points, segments, angles, measurements, relative positions. "
+            "Use tactile and spatial language (left/right/above/below) instead of 'look at the figure'."
         )
 
     try:
         import httpx as _hx
         async with _hx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                headers={"Content-Type": "application/json"},
                 json={
-                    "model": "llama-3.2-11b-vision-preview",
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": [
-                            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
-                            {"type": "text", "text": prompt},
-                        ]},
-                    ],
-                    "max_tokens": 800,
+                    "contents": [{
+                        "parts": [
+                            {"inline_data": {"mime_type": mime, "data": b64}},
+                            {"text": prompt},
+                        ]
+                    }],
+                    "generationConfig": {"maxOutputTokens": 800},
                 },
             )
         data = resp.json()
-        if "choices" in data:
-            description = data["choices"][0]["message"]["content"].strip()
+        candidates = data.get("candidates", [])
+        if candidates:
+            description = candidates[0]["content"]["parts"][0]["text"].strip()
         else:
-            # Surface Groq error detail for debugging
-            err_detail = data.get("error", {})
-            err_msg = err_detail.get("message", str(data)) if isinstance(err_detail, dict) else str(err_detail)
+            err = data.get("error", {})
+            err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
             description = f"Lỗi API: {err_msg}" if language == "vi" else f"API Error: {err_msg}"
     except Exception as exc:
         description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
 
     log_event("vision", "vision", file.filename or "image", description[:200])
-    return {"description": description, "model": "llama-3.2-vision"}
+    return {"description": description, "model": "gemini-2.0-flash"}
 
 
 ## ── DEMO RESET ────────────────────────────────────────────────────────────────
