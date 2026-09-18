@@ -714,14 +714,14 @@ def web_demo() -> HTMLResponse:
     .btn-stop-inline:hover{background:#b91c1c}
     @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
     @media(max-width:560px){body{font-size:16px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
-    /* Account sheet backdrop */
-    .acct-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:299;-webkit-tap-highlight-color:transparent}
-    .acct-backdrop.open{display:block}
-    /* Account sheet (slide-up from bottom) */
-    .acct-sheet{visibility:hidden;pointer-events:none;position:fixed;bottom:72px;left:0;right:0;max-height:80vh;overflow-y:auto;background:#fff;border-top:2px solid var(--line);border-radius:16px 16px 0 0;padding:20px 18px;z-index:300;box-shadow:0 -4px 32px rgba(0,0,0,0.14);transform:translateY(100%);transition:transform 0.25s ease,visibility 0s linear 0.25s}
-    .acct-sheet.open{visibility:visible;pointer-events:auto;transform:translateY(0);transition:transform 0.25s ease}
-    body.lv-dark .acct-backdrop{background:rgba(0,0,0,0.65)}
-    body.lv-dark .acct-sheet{background:#1a1a1a;border-color:#444}
+    /* Login modal — full-screen overlay, accessible for low-vision users */
+    .acct-backdrop{display:none;position:fixed;inset:0;background:rgba(10,20,50,0.72);z-index:400;-webkit-tap-highlight-color:transparent;backdrop-filter:blur(3px)}
+    .acct-backdrop.open{display:flex;align-items:center;justify-content:center;padding:16px}
+    .acct-sheet{background:#fff;border-radius:20px;padding:32px 28px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 60px rgba(0,0,0,0.35);position:relative;transform:scale(0.95);opacity:0;transition:transform 0.2s ease,opacity 0.2s ease}
+    .acct-backdrop.open .acct-sheet{transform:scale(1);opacity:1}
+    body.lv-dark .acct-backdrop{background:rgba(0,0,0,0.82)}
+    body.lv-dark .acct-sheet{background:#1a1a1a;color:#f0f0f0}
+    body.lv-dark .acct-sheet input{background:#2a2a2a;border-color:#555;color:#f0f0f0}
     @media(max-width:360px){.brand{font-size:15px}.lang-toggle button{padding:7px 10px;min-width:46px}.status{grid-template-columns:1fr}}
     /* ── LOW VISION MODE ── */
     body.lv-mode{font-size:1.2em;line-height:1.7;letter-spacing:0.01em}
@@ -841,8 +841,6 @@ def web_demo() -> HTMLResponse:
     @media(min-width:901px){
       .tab-pane{display:block !important}
       #desktop-acct-btn{display:inline-flex !important}
-      .acct-sheet{bottom:0;border-radius:16px 16px 0 0;max-width:440px;left:auto;right:20px}
-      .acct-backdrop{display:none !important}
     }
     @media(max-width:900px){
       .tab-nav{display:flex}
@@ -1832,48 +1830,36 @@ function _updateAuthBar(username) {
 
 // Account sheet
 function _setSheetOpen(open) {
-  var sheet = document.getElementById('acct-sheet');
   var backdrop = document.getElementById('acct-backdrop');
-  if (!sheet) return;
+  if (!backdrop) return;
   if (open) {
-    sheet.classList.add('open');
-    if (backdrop) backdrop.classList.add('open');
-    document.body.style.overflow = window.innerWidth <= 900 ? 'hidden' : '';
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
   } else {
-    sheet.classList.remove('open');
-    if (backdrop) backdrop.classList.remove('open');
+    backdrop.classList.remove('open');
     document.body.style.overflow = '';
-    sheet.style.transform = '';
   }
 }
 function toggleAccountSheet() {
-  var sheet = document.getElementById('acct-sheet');
-  if (!sheet) return;
-  if (sheet.classList.contains('open')) {
+  var backdrop = document.getElementById('acct-backdrop');
+  if (!backdrop) return;
+  if (backdrop.classList.contains('open')) {
     _setSheetOpen(false);
   } else {
     _setSheetOpen(true);
-    // Auto-focus only on desktop
-    if (window.innerWidth > 900) {
-      var inp = document.getElementById('as-username');
-      var loggedout = document.getElementById('acct-loggedout');
-      if (inp && loggedout && loggedout.style.display !== 'none') setTimeout(function(){ inp.focus(); }, 200);
+    // Focus username input after animation
+    var loggedout = document.getElementById('acct-loggedout');
+    if (loggedout && loggedout.style.display !== 'none') {
+      setTimeout(function(){
+        var inp = document.getElementById('as-username');
+        if (inp) inp.focus();
+      }, 250);
     }
   }
 }
 function closeAccountSheet() {
   _setSheetOpen(false);
 }
-// Lift sheet above virtual keyboard on mobile
-(function() {
-  if (!window.visualViewport) return;
-  window.visualViewport.addEventListener('resize', function() {
-    var sheet = document.getElementById('acct-sheet');
-    if (!sheet || !sheet.classList.contains('open') || window.innerWidth > 900) return;
-    var kbH = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
-    sheet.style.transform = kbH > 80 ? 'translateY(-' + Math.round(kbH) + 'px)' : '';
-  });
-})();
 
 async function doLoginSheet() {
   var username = (document.getElementById('as-username') || {}).value || '';
@@ -2296,32 +2282,58 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
-<!-- Account sheet backdrop (mobile only) -->
-<div class="acct-backdrop" id="acct-backdrop" onclick="closeAccountSheet()" aria-hidden="true"></div>
-<!-- Account sheet: slides up from bottom on mobile -->
-<div class="acct-sheet" id="acct-sheet" role="dialog" aria-label="Tài khoản" aria-modal="true">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <span style="font-weight:800;font-size:16px;color:var(--blue)">👤 Tài khoản</span>
-    <button onclick="closeAccountSheet()" aria-label="Đóng" style="border:0;background:transparent;font-size:26px;cursor:pointer;color:var(--muted);line-height:1;padding:2px 6px">×</button>
-  </div>
-  <!-- Logged-out state -->
-  <div id="acct-loggedout">
-    <p style="color:var(--muted);font-size:15px;margin:0 0 12px">Đăng nhập để lưu tiến độ học tập.</p>
-    <div style="display:grid;gap:10px">
-      <input type="text" id="as-username" placeholder="Tên đăng nhập (vd: ndc001)" autocomplete="username"
-        aria-label="Tên đăng nhập" style="padding:12px;border:1.5px solid var(--line);border-radius:10px;font-size:16px;width:100%;box-sizing:border-box"/>
-      <input type="password" id="as-password" placeholder="Mật khẩu" autocomplete="current-password"
-        aria-label="Mật khẩu" style="padding:12px;border:1.5px solid var(--line);border-radius:10px;font-size:16px;width:100%;box-sizing:border-box"/>
-      <button onclick="doLoginSheet()"
-        style="background:var(--blue);color:#fff;border:0;border-radius:10px;padding:14px;font-weight:700;cursor:pointer;font-size:16px;min-height:48px">🔑 Đăng nhập</button>
-      <p id="as-msg" style="margin:0;font-weight:600;font-size:14px;min-height:18px"></p>
+<!-- Login modal backdrop — tap outside to close -->
+<div class="acct-backdrop" id="acct-backdrop" onclick="closeAccountSheet()" role="dialog" aria-label="Đăng nhập tài khoản" aria-modal="true">
+  <!-- Modal card: stopPropagation prevents tap-outside from closing when tapping inside -->
+  <div class="acct-sheet" id="acct-sheet" onclick="event.stopPropagation()">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div style="font-size:40px;line-height:1;margin-bottom:6px">👤</div>
+        <h2 style="margin:0;font-size:24px;font-weight:900;color:var(--blue)">Tài khoản</h2>
+      </div>
+      <button onclick="closeAccountSheet()" aria-label="Đóng"
+        style="border:0;background:#f3f4f6;border-radius:50%;width:44px;height:44px;font-size:22px;cursor:pointer;color:#374151;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>
     </div>
-  </div>
-  <!-- Logged-in state -->
-  <div id="acct-loggedin" style="display:none">
-    <p id="as-username-display" style="font-size:16px;font-weight:700;color:var(--blue);margin:0 0 16px"></p>
-    <button onclick="doLogout()"
-      style="width:100%;background:#f3f4f6;border:1.5px solid var(--line);border-radius:10px;padding:13px;font-weight:700;cursor:pointer;font-size:16px;color:var(--ink);min-height:48px">Đăng xuất</button>
+
+    <!-- Logged-out state -->
+    <div id="acct-loggedout">
+      <p style="color:var(--muted);font-size:17px;margin:0 0 20px;line-height:1.5">Đăng nhập để lưu tiến độ học tập và sử dụng đầy đủ tính năng.</p>
+      <div style="display:grid;gap:14px">
+        <div>
+          <label for="as-username" style="display:block;font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px">Tên đăng nhập</label>
+          <input type="text" id="as-username" placeholder="vd: ndc001" autocomplete="username" inputmode="text"
+            aria-label="Tên đăng nhập"
+            style="padding:16px 18px;border:2px solid var(--line);border-radius:12px;font-size:20px;width:100%;box-sizing:border-box;font-family:inherit;transition:border-color 0.15s"
+            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--line)'"
+            onkeydown="if(event.key==='Enter')document.getElementById('as-password').focus()"/>
+        </div>
+        <div>
+          <label for="as-password" style="display:block;font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px">Mật khẩu</label>
+          <input type="password" id="as-password" placeholder="••••••" autocomplete="current-password"
+            aria-label="Mật khẩu"
+            style="padding:16px 18px;border:2px solid var(--line);border-radius:12px;font-size:20px;width:100%;box-sizing:border-box;font-family:inherit;transition:border-color 0.15s"
+            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--line)'"
+            onkeydown="if(event.key==='Enter')doLoginSheet()"/>
+        </div>
+        <button onclick="doLoginSheet()"
+          style="background:var(--blue);color:#fff;border:0;border-radius:12px;padding:18px;font-weight:800;cursor:pointer;font-size:20px;min-height:64px;width:100%;letter-spacing:0.3px;box-shadow:0 4px 16px rgba(18,53,91,0.25)">🔑 Đăng nhập</button>
+        <p id="as-msg" role="alert" aria-live="polite" style="margin:0;font-weight:700;font-size:16px;min-height:22px;text-align:center"></p>
+      </div>
+    </div>
+
+    <!-- Logged-in state -->
+    <div id="acct-loggedin" style="display:none">
+      <div style="background:linear-gradient(135deg,#e8f0fb,#d4e6f8);border-radius:14px;padding:20px;margin-bottom:20px;text-align:center">
+        <div style="font-size:48px;margin-bottom:8px">✅</div>
+        <p id="as-username-display" style="font-size:20px;font-weight:800;color:var(--blue);margin:0"></p>
+        <p style="margin:6px 0 0;font-size:15px;color:var(--muted)">Đã đăng nhập thành công</p>
+      </div>
+      <button onclick="doLogout()"
+        style="width:100%;background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:16px;font-weight:700;cursor:pointer;font-size:18px;color:#374151;min-height:56px">Đăng xuất</button>
+    </div>
+
   </div>
 </div>
 
