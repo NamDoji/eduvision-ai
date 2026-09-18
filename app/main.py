@@ -3009,15 +3009,21 @@ async def describe_image(
         prompt = (
             "Bạn là trợ lý giáo dục cho học sinh khiếm thị. "
             "Đây là hình vẽ từ bài toán hoặc tài liệu học tập. "
-            "Mô tả chi tiết bằng lời: hình dạng, điểm, đoạn thẳng, góc, số liệu, kích thước, vị trí tương đối. "
-            "Không dùng 'nhìn vào hình' hay 'như hình vẽ' — thay bằng ngôn ngữ xúc giác và mô tả không gian (trái/phải/trên/dưới)."
+            "Mô tả chi tiết bằng lời thuần túy (KHÔNG dùng markdown, KHÔNG dùng ###, **, *, gạch đầu dòng): "
+            "hình dạng, điểm, đoạn thẳng, góc, số liệu, kích thước, vị trí tương đối. "
+            "Viết thành các đoạn văn ngắn gọn, rõ ràng. "
+            "Không dùng 'nhìn vào hình' hay 'như hình vẽ' — thay bằng ngôn ngữ xúc giác và mô tả không gian (trái/phải/trên/dưới). "
+            "Bắt đầu trực tiếp bằng mô tả, không cần dẫn nhập dài dòng."
         )
     else:
         prompt = (
             "You are an accessible math educator for visually impaired students. "
             "This is a figure from a math problem or study material. "
-            "Describe it in detail: shapes, points, segments, angles, measurements, relative positions. "
-            "Use tactile and spatial language (left/right/above/below) instead of 'look at the figure'."
+            "Describe it in plain text only (NO markdown, NO ###, NO **, NO bullet points): "
+            "shapes, points, segments, angles, measurements, relative positions. "
+            "Write in short clear paragraphs. "
+            "Use tactile and spatial language (left/right/above/below). "
+            "Start the description directly without a long preamble."
         )
 
     try:
@@ -3039,7 +3045,14 @@ async def describe_image(
         data = resp.json()
         candidates = data.get("candidates", [])
         if candidates:
-            description = candidates[0]["content"]["parts"][0]["text"].strip()
+            raw = candidates[0]["content"]["parts"][0]["text"].strip()
+            # Strip markdown: headers, bold, italic, bullets
+            import re as _re
+            raw = _re.sub(r'^\s*#{1,6}\s*', '', raw, flags=_re.MULTILINE)
+            raw = _re.sub(r'\*\*(.+?)\*\*', r'\1', raw)
+            raw = _re.sub(r'\*(.+?)\*', r'\1', raw)
+            raw = _re.sub(r'^\s*[-*]\s+', '', raw, flags=_re.MULTILINE)
+            description = raw.strip()
         else:
             err = data.get("error", {})
             err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
