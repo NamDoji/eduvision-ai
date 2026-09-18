@@ -712,6 +712,20 @@ def web_demo() -> HTMLResponse:
     .speaking-badge.show{display:flex}
     .btn-stop-inline{background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer;margin-left:10px}
     .btn-stop-inline:hover{background:#b91c1c}
+    /* Vision mode selector */
+    .vision-mode-bar{display:flex;gap:8px;margin-bottom:10px}
+    .vision-mode-btn{border:2px solid var(--line);background:#fff;border-radius:8px;padding:7px 16px;font-size:14px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
+    .vision-mode-btn.active{border-color:var(--red);background:var(--red);color:#fff}
+    .vision-mode-btn:hover:not(.active){border-color:var(--red);color:var(--red)}
+    /* Follow-up section */
+    .vision-followup{display:none;margin-top:12px;padding:12px;background:var(--soft);border-radius:10px;border:1px solid var(--line)}
+    .vision-followup.show{display:block}
+    .vision-followup input{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:8px;font-size:15px;box-sizing:border-box;margin-bottom:8px}
+    .vision-followup input:focus{outline:none;border-color:var(--red)}
+    body.lv-dark .vision-mode-btn{background:#1a1a1a;color:#aaa;border-color:#444}
+    body.lv-dark .vision-mode-btn.active{background:var(--red);color:#fff;border-color:var(--red)}
+    body.lv-dark .vision-followup{background:#1a1a1a;border-color:#444}
+    body.lv-dark .vision-followup input{background:#2a2a2a;color:#f0f0f0;border-color:#555}
     @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
     @media(max-width:560px){body{font-size:16px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
     /* Login modal — full-screen overlay, accessible for low-vision users */
@@ -1020,10 +1034,20 @@ def web_demo() -> HTMLResponse:
       <div class="card">
         <h2 id="vision-title">👁 Mô tả hình vẽ</h2>
         <p class="vision-hint" id="vision-hint">Chụp ảnh bài toán hoặc hình vẽ — AI mô tả chi tiết bằng lời những phần khó nhìn rõ.</p>
+        <div class="vision-mode-bar" role="group" aria-label="Chế độ mô tả">
+          <button class="vision-mode-btn active" data-mode="detail" onclick="setVisionMode('detail')" title="Mô tả đầy đủ chi tiết">📖 Chi tiết</button>
+          <button class="vision-mode-btn" data-mode="quick" onclick="setVisionMode('quick')" title="Tóm tắt nhanh 2-3 câu">⚡ Nhanh</button>
+        </div>
         <input id="visionFile" type="file" accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh hình vẽ cần mô tả"/>
         <div class="actions">
           <button class="btn" onclick="describeImage()" id="btn-vision">📸 Mô tả hình</button>
           <button class="btn ghost" onclick="speakResult()" id="btn-speak-vision">🔊 Đọc kết quả</button>
+        </div>
+        <!-- Hỏi thêm sau khi đã mô tả -->
+        <div class="vision-followup" id="vision-followup">
+          <p style="margin:0 0 8px;font-weight:600;font-size:14px;color:var(--blue)">💬 Hỏi thêm về hình này</p>
+          <input type="text" id="vision-followup-input" placeholder="Ví dụ: Điểm A nằm ở đâu? Góc ở góc phải là bao nhiêu độ?" aria-label="Câu hỏi bổ sung về hình vẽ" onkeydown="if(event.key==='Enter')askVisionFollowup()"/>
+          <button class="btn" onclick="askVisionFollowup()" style="width:100%">💬 Gửi câu hỏi</button>
         </div>
       </div>
       </div><!-- /pane-tools -->
@@ -1235,11 +1259,32 @@ function pauseResumeSpeech() {
   }
 }
 
+function mathToVerbal(text, lang) {
+  if (lang !== 'vi') return text
+    .replace(/(\w+)\^2/g, '$1 squared').replace(/(\w+)\^3/g, '$1 cubed')
+    .replace(/(\w+)\^(\d+)/g, '$1 to the power of $2')
+    .replace(/√(\w+)/g, 'square root of $1').replace(/π/g, 'pi')
+    .replace(/÷/g, ' divided by ').replace(/×/g, ' times ')
+    .replace(/≤/g, ' less than or equal to ').replace(/≥/g, ' greater than or equal to ')
+    .replace(/≠/g, ' not equal to ').replace(/∈/g, ' in ').replace(/∞/g, ' infinity ');
+  return text
+    .replace(/(\w+)\^2/g, '$1 bình phương').replace(/(\w+)\^3/g, '$1 lập phương')
+    .replace(/(\w+)\^(\d+)/g, '$1 mũ $2')
+    .replace(/√(\w+)/g, 'căn của $1').replace(/√/g, 'căn bậc hai ')
+    .replace(/π/g, ' pi ').replace(/∞/g, ' vô cực ')
+    .replace(/÷/g, ' chia ').replace(/×/g, ' nhân ')
+    .replace(/≤/g, ' nhỏ hơn hoặc bằng ').replace(/≥/g, ' lớn hơn hoặc bằng ')
+    .replace(/≠/g, ' khác ').replace(/=/g, ' bằng ').replace(/\+/g, ' cộng ')
+    .replace(/∈/g, ' thuộc tập hợp ').replace(/∉/g, ' không thuộc ')
+    .replace(/⊂/g, ' là tập con của ').replace(/∪/g, ' hợp ').replace(/∩/g, ' giao ');
+}
+
 function speakText(text, lang) {
   if (!window.speechSynthesis) return;
   stopSpeech(false);
   const badge = document.getElementById('speaking-badge');
-  const clean = text.replace(/[#*`{}"]/g, '').replace(/\\n{2,}/g, ' ').slice(0, 3000);
+  const verbal = mathToVerbal(text, lang);
+  const clean = verbal.replace(/[#*`{}"]/g, '').replace(/\\n{2,}/g, ' ').slice(0, 3000);
   const utt = new SpeechSynthesisUtterance(clean);
   utt.lang = UI[lang].ttsLang;
   utt.rate = (_ttsSpeed || 1.0) * (lang === 'vi' ? 0.88 : 0.92);
@@ -1788,21 +1833,67 @@ function showTab(name) {
 }
 
 // ── VISION DESCRIBE ─────────────────────────────────────────────────────────
+var _visionMode = 'detail';
+var _lastVisionFile = null;
+
+function setVisionMode(mode) {
+  _visionMode = mode;
+  document.querySelectorAll('.vision-mode-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  announce(LANG === 'vi'
+    ? (mode === 'quick' ? 'Chế độ mô tả nhanh' : 'Chế độ mô tả chi tiết')
+    : (mode === 'quick' ? 'Quick description mode' : 'Detailed description mode'));
+}
+
 async function describeImage() {
   const input = document.getElementById('visionFile');
   if (!input || !input.files.length) {
     alert(LANG === 'vi' ? 'Vui lòng chọn ảnh hình vẽ' : 'Please select an image file');
     return;
   }
-  showLoading();
+  _lastVisionFile = input.files[0];
+  showLoading(LANG === 'vi' ? 'AI đang phân tích hình...' : 'AI is analyzing the image...');
   try {
     const fd = new FormData();
-    fd.append('file', input.files[0]);
+    fd.append('file', _lastVisionFile);
     fd.append('language', LANG);
+    fd.append('mode', _visionMode);
     const res = await fetch('/describe-image', { method: 'POST', body: fd });
     const data = await readResponse(res);
     const desc = data.description || data;
-    setResult(typeof desc === 'string' ? desc : JSON.stringify(desc, null, 2));
+    const text = typeof desc === 'string' ? desc : JSON.stringify(desc, null, 2);
+    setResult(text);
+    // Show follow-up section after first successful description
+    var fu = document.getElementById('vision-followup');
+    if (fu) fu.classList.add('show');
+    var fuInput = document.getElementById('vision-followup-input');
+    if (fuInput) fuInput.value = '';
+  } catch(e) { displayError(e.message); }
+  finally { hideLoading(); }
+}
+
+async function askVisionFollowup() {
+  if (!_lastVisionFile) {
+    alert(LANG === 'vi' ? 'Chưa có hình nào. Vui lòng chọn ảnh và mô tả trước.' : 'No image loaded yet. Please describe an image first.');
+    return;
+  }
+  const input = document.getElementById('vision-followup-input');
+  const question = input ? input.value.trim() : '';
+  if (!question) { if (input) input.focus(); return; }
+  showLoading(LANG === 'vi' ? 'Đang xử lý câu hỏi...' : 'Processing question...');
+  try {
+    const fd = new FormData();
+    fd.append('file', _lastVisionFile);
+    fd.append('language', LANG);
+    fd.append('question', question);
+    const res = await fetch('/describe-image/followup', { method: 'POST', body: fd });
+    const data = await readResponse(res);
+    const answer = data.answer || data.description || data;
+    const text = typeof answer === 'string' ? answer : JSON.stringify(answer, null, 2);
+    // Prepend question context to result
+    setResult((LANG === 'vi' ? 'Câu hỏi: ' : 'Q: ') + question + '\\n\\n' + text);
+    if (input) input.value = '';
   } catch(e) { displayError(e.message); }
   finally { hideLoading(); }
 }
@@ -3040,77 +3131,138 @@ h1{{color:#12355b;}} table{{font-size:14px;}} th,td{{text-align:left;}}
 
 ## ── VISION DESCRIBE ──────────────────────────────────────────────────────────
 
+def _strip_markdown(text: str) -> str:
+    """Remove markdown formatting from AI output."""
+    text = re.sub(r'^\s*#{1,6}\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'^\s*[-*]\s+', '', text, flags=re.MULTILINE)
+    return text.strip()
+
+
+async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
+    """Call Gemini Vision API and return plain-text response."""
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if not gemini_key:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY chưa được cấu hình")
+    b64 = base64.b64encode(img_bytes).decode()
+    import httpx as _hx
+    async with _hx.AsyncClient(timeout=40) as client:
+        resp = await client.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [{"parts": [
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                    {"text": prompt},
+                ]}],
+                "generationConfig": {"maxOutputTokens": max_tokens},
+            },
+        )
+    data = resp.json()
+    candidates = data.get("candidates", [])
+    if candidates:
+        return _strip_markdown(candidates[0]["content"]["parts"][0]["text"].strip())
+    err = data.get("error", {})
+    err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
+    raise HTTPException(status_code=502, detail=f"Gemini API error: {err_msg}")
+
+
 @app.post("/describe-image")
 async def describe_image(
     file: UploadFile = File(...),
     language: str = Form(default="vi"),
+    mode: str = Form(default="detail"),
 ) -> Dict[str, Any]:
-    """Mô tả hình vẽ toán học bằng Gemini Vision cho học sinh khiếm thị."""
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
-    if not gemini_key:
-        raise HTTPException(status_code=503, detail="GEMINI_API_KEY chưa được cấu hình")
-
+    """Mô tả hình vẽ toán học bằng Gemini Vision. mode=quick (2-3 câu) hoặc detail (đầy đủ)."""
     img_bytes = await file.read()
-    b64 = base64.b64encode(img_bytes).decode()
+    mime = file.content_type or "image/jpeg"
+
+    is_quick = mode == "quick"
+    if language == "vi":
+        if is_quick:
+            prompt = (
+                "Bạn là trợ lý cho học sinh khiếm thị. "
+                "Mô tả hình vẽ này trong 2-3 câu ngắn gọn, chỉ nêu những điểm quan trọng nhất. "
+                "Dùng văn xuôi thuần túy, không markdown, không gạch đầu dòng. "
+                "Dùng ngôn ngữ không gian (trái/phải/trên/dưới)."
+            )
+        else:
+            prompt = (
+                "Bạn là trợ lý giáo dục cho học sinh khiếm thị. "
+                "Đây là hình vẽ từ bài toán hoặc tài liệu học tập. "
+                "Mô tả chi tiết bằng lời thuần túy (KHÔNG dùng markdown, KHÔNG dùng ###, **, *, gạch đầu dòng): "
+                "hình dạng, điểm, đoạn thẳng, góc, số liệu, kích thước, vị trí tương đối. "
+                "Viết thành các đoạn văn ngắn gọn, rõ ràng. "
+                "Không dùng 'nhìn vào hình' hay 'như hình vẽ' — thay bằng ngôn ngữ xúc giác và mô tả không gian (trái/phải/trên/dưới). "
+                "Bắt đầu trực tiếp bằng mô tả, không cần dẫn nhập dài dòng."
+            )
+    else:
+        if is_quick:
+            prompt = (
+                "You are an assistant for visually impaired students. "
+                "Describe this image in 2-3 short sentences, focusing only on the most important elements. "
+                "Plain text only, no markdown, no bullet points. Use spatial language (left/right/above/below)."
+            )
+        else:
+            prompt = (
+                "You are an accessible math educator for visually impaired students. "
+                "This is a figure from a math problem or study material. "
+                "Describe it in plain text only (NO markdown, NO ###, NO **, NO bullet points): "
+                "shapes, points, segments, angles, measurements, relative positions. "
+                "Write in short clear paragraphs. "
+                "Use tactile and spatial language (left/right/above/below). "
+                "Start the description directly without a long preamble."
+            )
+
+    max_tokens = 250 if is_quick else 800
+    try:
+        description = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
+
+    log_event("vision", "vision", file.filename or "image", description[:200])
+    return {"description": description, "model": "gemini-3.6-flash", "mode": mode}
+
+
+@app.post("/describe-image/followup")
+async def describe_image_followup(
+    file: UploadFile = File(...),
+    language: str = Form(default="vi"),
+    question: str = Form(...),
+) -> Dict[str, Any]:
+    """Hỏi thêm về hình đã mô tả — gửi lại ảnh kèm câu hỏi cụ thể."""
+    img_bytes = await file.read()
     mime = file.content_type or "image/jpeg"
 
     if language == "vi":
         prompt = (
             "Bạn là trợ lý giáo dục cho học sinh khiếm thị. "
-            "Đây là hình vẽ từ bài toán hoặc tài liệu học tập. "
-            "Mô tả chi tiết bằng lời thuần túy (KHÔNG dùng markdown, KHÔNG dùng ###, **, *, gạch đầu dòng): "
-            "hình dạng, điểm, đoạn thẳng, góc, số liệu, kích thước, vị trí tương đối. "
-            "Viết thành các đoạn văn ngắn gọn, rõ ràng. "
-            "Không dùng 'nhìn vào hình' hay 'như hình vẽ' — thay bằng ngôn ngữ xúc giác và mô tả không gian (trái/phải/trên/dưới). "
-            "Bắt đầu trực tiếp bằng mô tả, không cần dẫn nhập dài dòng."
+            "Dưới đây là câu hỏi cụ thể về hình vẽ này. Hãy trả lời ngắn gọn, rõ ràng bằng văn xuôi thuần túy "
+            "(KHÔNG dùng markdown, KHÔNG dùng ###, **, gạch đầu dòng). "
+            "Dùng ngôn ngữ không gian (trái/phải/trên/dưới/góc trên bên trái...). "
+            f"Câu hỏi: {question}"
         )
     else:
         prompt = (
             "You are an accessible math educator for visually impaired students. "
-            "This is a figure from a math problem or study material. "
-            "Describe it in plain text only (NO markdown, NO ###, NO **, NO bullet points): "
-            "shapes, points, segments, angles, measurements, relative positions. "
-            "Write in short clear paragraphs. "
-            "Use tactile and spatial language (left/right/above/below). "
-            "Start the description directly without a long preamble."
+            "Answer the following specific question about this image. "
+            "Plain text only (NO markdown, NO ###, NO bullet points). "
+            "Use spatial language (left/right/above/below). "
+            f"Question: {question}"
         )
 
     try:
-        import httpx as _hx
-        async with _hx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "contents": [{
-                        "parts": [
-                            {"inline_data": {"mime_type": mime, "data": b64}},
-                            {"text": prompt},
-                        ]
-                    }],
-                    "generationConfig": {"maxOutputTokens": 800},
-                },
-            )
-        data = resp.json()
-        candidates = data.get("candidates", [])
-        if candidates:
-            raw = candidates[0]["content"]["parts"][0]["text"].strip()
-            # Strip markdown: headers, bold, italic, bullets
-            import re as _re
-            raw = _re.sub(r'^\s*#{1,6}\s*', '', raw, flags=_re.MULTILINE)
-            raw = _re.sub(r'\*\*(.+?)\*\*', r'\1', raw)
-            raw = _re.sub(r'\*(.+?)\*', r'\1', raw)
-            raw = _re.sub(r'^\s*[-*]\s+', '', raw, flags=_re.MULTILINE)
-            description = raw.strip()
-        else:
-            err = data.get("error", {})
-            err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
-            description = f"Lỗi API: {err_msg}" if language == "vi" else f"API Error: {err_msg}"
+        answer = await _gemini_vision(img_bytes, mime, prompt, max_tokens=500)
+    except HTTPException:
+        raise
     except Exception as exc:
-        description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
+        answer = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
 
-    log_event("vision", "vision", file.filename or "image", description[:200])
-    return {"description": description, "model": "gemini-3.6-flash"}
+    log_event("vision", "followup", question[:80], answer[:200])
+    return {"answer": answer, "model": "gemini-3.6-flash"}
 
 
 ## ── DEMO RESET ────────────────────────────────────────────────────────────────
