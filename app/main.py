@@ -714,9 +714,13 @@ def web_demo() -> HTMLResponse:
     .btn-stop-inline:hover{background:#b91c1c}
     @media(max-width:900px){.grid,.row2{grid-template-columns:1fr}.result-panel{position:static}.btn{width:100%}.lang-toggle{max-width:100%}pre{min-height:260px;max-height:460px}}
     @media(max-width:560px){body{font-size:16px}.brand{font-size:17px}.hero-wrap{padding:12px 14px 8px}main{padding:8px 14px 36px}.card{padding:16px}.status{grid-template-columns:1fr 1fr}.actions{gap:10px}pre{font-size:13px;padding:14px;min-height:240px}}
+    /* Account sheet backdrop */
+    .acct-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:299;-webkit-tap-highlight-color:transparent}
+    .acct-backdrop.open{display:block}
     /* Account sheet (slide-up from bottom) */
-    .acct-sheet{display:none;position:fixed;bottom:72px;left:0;right:0;max-height:80vh;overflow-y:auto;background:#fff;border-top:2px solid var(--line);border-radius:16px 16px 0 0;padding:20px 18px;z-index:300;box-shadow:0 -4px 32px rgba(0,0,0,0.14)}
-    .acct-sheet.open{display:block}
+    .acct-sheet{visibility:hidden;pointer-events:none;position:fixed;bottom:72px;left:0;right:0;max-height:80vh;overflow-y:auto;background:#fff;border-top:2px solid var(--line);border-radius:16px 16px 0 0;padding:20px 18px;z-index:300;box-shadow:0 -4px 32px rgba(0,0,0,0.14);transform:translateY(100%);transition:transform 0.25s ease,visibility 0s linear 0.25s}
+    .acct-sheet.open{visibility:visible;pointer-events:auto;transform:translateY(0);transition:transform 0.25s ease}
+    body.lv-dark .acct-backdrop{background:rgba(0,0,0,0.65)}
     body.lv-dark .acct-sheet{background:#1a1a1a;border-color:#444}
     @media(max-width:360px){.brand{font-size:15px}.lang-toggle button{padding:7px 10px;min-width:46px}.status{grid-template-columns:1fr}}
     /* ── LOW VISION MODE ── */
@@ -837,7 +841,8 @@ def web_demo() -> HTMLResponse:
     @media(min-width:901px){
       .tab-pane{display:block !important}
       #desktop-acct-btn{display:inline-flex !important}
-      .acct-sheet{bottom:0;border-radius:16px 16px 0 0;max-width:420px;left:auto;right:16px}
+      .acct-sheet{bottom:0;border-radius:16px 16px 0 0;max-width:440px;left:auto;right:20px}
+      .acct-backdrop{display:none !important}
     }
     @media(max-width:900px){
       .tab-nav{display:flex}
@@ -1826,26 +1831,49 @@ function _updateAuthBar(username) {
 }
 
 // Account sheet
+function _setSheetOpen(open) {
+  var sheet = document.getElementById('acct-sheet');
+  var backdrop = document.getElementById('acct-backdrop');
+  if (!sheet) return;
+  if (open) {
+    sheet.classList.add('open');
+    if (backdrop) backdrop.classList.add('open');
+    document.body.style.overflow = window.innerWidth <= 900 ? 'hidden' : '';
+  } else {
+    sheet.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+    sheet.style.transform = '';
+  }
+}
 function toggleAccountSheet() {
   var sheet = document.getElementById('acct-sheet');
   if (!sheet) return;
   if (sheet.classList.contains('open')) {
-    sheet.classList.remove('open');
+    _setSheetOpen(false);
   } else {
-    sheet.classList.add('open');
-    // Only auto-focus on desktop (mobile keyboard causes layout jump)
-    var isMobile = window.innerWidth <= 900;
-    if (!isMobile) {
+    _setSheetOpen(true);
+    // Auto-focus only on desktop
+    if (window.innerWidth > 900) {
       var inp = document.getElementById('as-username');
       var loggedout = document.getElementById('acct-loggedout');
-      if (inp && loggedout && loggedout.style.display !== 'none') setTimeout(function(){ inp.focus(); }, 150);
+      if (inp && loggedout && loggedout.style.display !== 'none') setTimeout(function(){ inp.focus(); }, 200);
     }
   }
 }
 function closeAccountSheet() {
-  var sheet = document.getElementById('acct-sheet');
-  if (sheet) sheet.classList.remove('open');
+  _setSheetOpen(false);
 }
+// Lift sheet above virtual keyboard on mobile
+(function() {
+  if (!window.visualViewport) return;
+  window.visualViewport.addEventListener('resize', function() {
+    var sheet = document.getElementById('acct-sheet');
+    if (!sheet || !sheet.classList.contains('open') || window.innerWidth > 900) return;
+    var kbH = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+    sheet.style.transform = kbH > 80 ? 'translateY(-' + Math.round(kbH) + 'px)' : '';
+  });
+})();
 
 async function doLoginSheet() {
   var username = (document.getElementById('as-username') || {}).value || '';
@@ -2268,6 +2296,8 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- Account sheet backdrop (mobile only) -->
+<div class="acct-backdrop" id="acct-backdrop" onclick="closeAccountSheet()" aria-hidden="true"></div>
 <!-- Account sheet: slides up from bottom on mobile -->
 <div class="acct-sheet" id="acct-sheet" role="dialog" aria-label="Tài khoản" aria-modal="true">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
