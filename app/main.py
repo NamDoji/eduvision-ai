@@ -863,7 +863,7 @@ def web_demo() -> HTMLResponse:
     .sentence-nav button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
     /* ── TAB NAVIGATION (mobile) ── */
     .tab-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--line);z-index:200;padding-bottom:env(safe-area-inset-bottom)}
-    body.acct-open .tab-nav{pointer-events:none !important;opacity:0.4}
+    body.acct-open .tab-nav{opacity:0.4}
     .tab-nav>.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;border:0;background:transparent;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px;-webkit-tap-highlight-color:transparent;transition:color 0.12s;line-height:1.2}
     .tab-btn .t-icon{font-size:24px;line-height:1.1;display:block}
     body.lv-mode .tab-nav>.tab-btn{font-size:14px}
@@ -2197,6 +2197,11 @@ function closeAccountSheet() {
 function forceCloseAccountSheet() {
   _setSheetOpen(false);
 }
+// Failsafe: clear stuck acct-open when page becomes visible again
+window.addEventListener('pageshow', function() { _setSheetOpen(false); });
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') _setSheetOpen(false);
+});
 
 // Backdrop tap-to-close: touchstart+touchend phải cùng trên backdrop
 (function() {
