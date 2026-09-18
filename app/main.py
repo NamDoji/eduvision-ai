@@ -2300,15 +2300,12 @@ async function doLoginSheet() {
   function onScroll() {
     if (!bar) bar = document.getElementById('brand-bar');
     if (!bar) return;
-    // KHÔNG đóng modal khi scroll — iOS scroll trang khi input trong modal được focus
-    var bd = document.getElementById('acct-backdrop');
-    if (bd && bd.classList.contains('open')) { _lastY = getScrollY(); return; }
     var cur = getScrollY();
     if (cur < 10) {
       bar.classList.remove('hidden');
     } else if (cur > _lastY + 5) {
       bar.classList.add('hidden');
-      forceCloseAccountSheet();
+      // KHÔNG forceCloseAccountSheet — modal fixed-position, scroll không liên quan đến modal
     } else if (cur < _lastY - 5) {
       bar.classList.remove('hidden');
     }
