@@ -3377,7 +3377,7 @@ async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
                 "Content-Type": "application/json",
             },
             json={
-                "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+                "model": "llama-4-scout-17b-16e-instruct",
                 "messages": [{"role": "user", "content": [
                     {"type": "image_url", "image_url": {"url": data_url}},
                     {"type": "text", "text": prompt},
@@ -3395,13 +3395,16 @@ async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
 
 
 async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> tuple[str, str]:
-    """Try Gemini first, fall back to Groq. Returns (text, model_name)."""
-    try:
-        result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
-        return result, "gemini-2.0-flash"
-    except Exception:
-        result = await _groq_vision(img_bytes, mime, prompt, max_tokens)
-        return result, "groq/llama-4-scout-17b"
+    """Try Groq first (reliable free tier), fall back to Gemini. Returns (text, model_name)."""
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if groq_key:
+        try:
+            result = await _groq_vision(img_bytes, mime, prompt, max_tokens)
+            return result, "groq/llama-4-scout-17b"
+        except Exception:
+            pass
+    result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
+    return result, "gemini-2.0-flash"
 
 
 @app.post("/describe-image")
