@@ -3337,22 +3337,85 @@ def _strip_markdown(text: str) -> str:
     return text.strip()
 
 
+async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
+    """Groq Vision — qwen3.8-27b, free tier, no credit card."""
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        raise Exception("GROQ_API_KEY chưa được cấu hình")
+    b64 = base64.b64encode(img_bytes).decode()
+    import httpx as _hx
+    async with _hx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+            json={
+                "model": "qwen/qwen3.8-27b",
+                "messages": [{"role": "user", "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+                ]}],
+                "max_completion_tokens": max_tokens,
+            },
+        )
+    data = resp.json()
+    choices = data.get("choices", [])
+    if choices:
+        return _strip_markdown(choices[0]["message"]["content"].strip())
+    err = data.get("error", {})
+    err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
+    raise Exception(f"Groq: {err_msg}")
+
+
+async def _openrouter_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
+    """OpenRouter free vision — auto-selects best free vision model."""
+    or_key = os.getenv("OPENROUTER_API_KEY", "")
+    if not or_key:
+        raise Exception("OPENROUTER_API_KEY chưa được cấu hình")
+    b64 = base64.b64encode(img_bytes).decode()
+    import httpx as _hx
+    async with _hx.AsyncClient(timeout=45) as client:
+        resp = await client.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {or_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://deepmath.vn",
+                "X-Title": "EduVision AI",
+            },
+            json={
+                "model": "openrouter/auto",
+                "messages": [{"role": "user", "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+                ]}],
+                "max_tokens": max_tokens,
+            },
+        )
+    data = resp.json()
+    choices = data.get("choices", [])
+    if choices:
+        return _strip_markdown(choices[0]["message"]["content"].strip())
+    err = data.get("error", {})
+    err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
+    raise Exception(f"OpenRouter: {err_msg}")
+
+
 async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
-    """Call Gemini Vision API with retry on high-demand errors."""
+    """Gemini Vision — gemini-2.0-flash, 1500 RPD free tier."""
     import asyncio
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if not gemini_key:
         raise Exception("GEMINI_API_KEY chưa được cấu hình")
     b64 = base64.b64encode(img_bytes).decode()
     import httpx as _hx
-    last_err = "Vision AI không khả dụng"
+    last_err = "Gemini không khả dụng"
     for attempt in range(3):
         if attempt > 0:
-            await asyncio.sleep(attempt * 2)
+            await asyncio.sleep(attempt * 3)
         try:
-            async with _hx.AsyncClient(timeout=15) as client:
+            async with _hx.AsyncClient(timeout=20) as client:
                 resp = await client.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
                     headers={"Content-Type": "application/json"},
                     json={
                         "contents": [{"parts": [
@@ -3368,8 +3431,8 @@ async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: i
                 return _strip_markdown(candidates[0]["content"]["parts"][0]["text"].strip())
             err = data.get("error", {})
             err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
-            if "high demand" in err_msg or "experiencing" in err_msg:
-                last_err = "Hệ thống AI đang bận, đang thử lại..." if attempt < 2 else "Hệ thống AI đang bận, vui lòng thử lại sau 1 phút."
+            if "high demand" in err_msg.lower() or "experiencing" in err_msg.lower() or "429" in str(resp.status_code):
+                last_err = "Gemini đang bận"
                 continue
             raise Exception(f"Gemini: {err_msg}")
         except Exception as e:
@@ -3379,43 +3442,33 @@ async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: i
     raise Exception(last_err)
 
 
-async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
-    """Call Groq Vision API (llama-4-scout-17b, free tier) as fallback."""
-    groq_key = os.getenv("GROQ_API_KEY", "")
-    if not groq_key:
-        raise HTTPException(status_code=503, detail="GROQ_API_KEY chưa được cấu hình")
-    b64 = base64.b64encode(img_bytes).decode()
-    data_url = f"data:{mime};base64,{b64}"
-    import httpx as _hx
-    async with _hx.AsyncClient(timeout=40) as client:
-        resp = await client.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {groq_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "llama-3.2-11b-vision-preview",
-                "messages": [{"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": data_url}},
-                    {"type": "text", "text": prompt},
-                ]}],
-                "max_tokens": max_tokens,
-            },
-        )
-    data = resp.json()
-    choices = data.get("choices", [])
-    if choices:
-        return _strip_markdown(choices[0]["message"]["content"].strip())
-    err = data.get("error", {})
-    err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
-    raise HTTPException(status_code=502, detail=f"Groq Vision error: {err_msg}")
+import hashlib as _hashlib
+
+_vision_cache: dict = {}  # {cache_key: (description, model)}
+
+def _vision_cache_key(img_bytes: bytes, mode: str, language: str) -> str:
+    h = _hashlib.sha256(img_bytes).hexdigest()[:16]
+    return f"{h}:{mode}:{language}"
 
 
 async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> tuple[str, str]:
-    """Call Gemini Vision. Returns (text, model_name)."""
-    result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
-    return result, "gemini-3.6-flash"
+    """Fallback chain: Groq → OpenRouter → Gemini. Returns (text, model_name)."""
+    import logging as _logging
+    providers = [
+        (_groq_vision, "groq-qwen3.8-27b"),
+        (_openrouter_vision, "openrouter-free"),
+        (_gemini_vision, "gemini-2.0-flash"),
+    ]
+    last_err = "Tất cả providers thất bại"
+    for fn, name in providers:
+        try:
+            result = await fn(img_bytes, mime, prompt, max_tokens)
+            if result:
+                return result, name
+        except Exception as e:
+            _logging.warning(f"Vision provider {name} failed: {e}")
+            last_err = str(e) or last_err
+    raise Exception(last_err)
 
 
 @app.post("/describe-image")
@@ -3427,6 +3480,10 @@ async def describe_image(
     """Mô tả hình vẽ toán học bằng Gemini Vision. mode=quick (2-3 câu) hoặc detail (đầy đủ)."""
     img_bytes = await file.read()
     mime = file.content_type or "image/jpeg"
+    cache_key = _vision_cache_key(img_bytes, mode, language)
+    if cache_key in _vision_cache:
+        cached_desc, cached_model = _vision_cache[cache_key]
+        return {"description": cached_desc, "model": cached_model + " (cached)", "mode": mode}
 
     is_quick = mode == "quick"
     if language == "vi":
@@ -3468,6 +3525,7 @@ async def describe_image(
     max_tokens = 250 if is_quick else 800
     try:
         description, model_used = await _vision_call(img_bytes, mime, prompt, max_tokens)
+        _vision_cache[cache_key] = (description, model_used)
     except Exception as exc:
         detail = getattr(exc, "detail", str(exc)) or str(exc)
         description = f"{'Lỗi' if language == 'vi' else 'Error'}: {detail}"
