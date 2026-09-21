@@ -3377,7 +3377,7 @@ async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
                 "Content-Type": "application/json",
             },
             json={
-                "model": "llama-4-scout-17b-16e-instruct",
+                "model": "llama-3.2-11b-vision-preview",
                 "messages": [{"role": "user", "content": [
                     {"type": "image_url", "image_url": {"url": data_url}},
                     {"type": "text", "text": prompt},
@@ -3395,25 +3395,16 @@ async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
 
 
 async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> tuple[str, str]:
-    """Try Groq first (if key set), then Gemini with retry. Returns (text, model_name)."""
-    import asyncio
+    """Try Groq first (if key set), then Gemini. Returns (text, model_name)."""
     groq_key = os.getenv("GROQ_API_KEY", "")
     if groq_key:
         try:
             result = await _groq_vision(img_bytes, mime, prompt, max_tokens)
-            return result, "groq/llama-4-scout-17b"
+            return result, "groq/llama-3.2-11b-vision"
         except Exception:
             pass
-    last_err = "Vision API không khả dụng"
-    for attempt in range(3):
-        if attempt > 0:
-            await asyncio.sleep(2 ** attempt)
-        try:
-            result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
-            return result, "gemini-3.6-flash"
-        except Exception as e:
-            last_err = getattr(e, "detail", str(e))
-    raise Exception(last_err)
+    result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
+    return result, "gemini-3.6-flash"
 
 
 @app.post("/describe-image")
