@@ -3401,8 +3401,8 @@ async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
         try:
             result = await _groq_vision(img_bytes, mime, prompt, max_tokens)
             return result, "groq/llama-3.2-11b-vision"
-        except Exception:
-            pass
+        except Exception as groq_err:
+            raise Exception(f"[GROQ] {getattr(groq_err, 'detail', str(groq_err))}")
     result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
     return result, "gemini-3.6-flash"
 
