@@ -1525,16 +1525,22 @@ function loadDemo(kind) {
 
 // ── API CALLS ────────────────────────────────────────────────────────────────
 async function askTutor() {
-  var q = document.getElementById('question').value.trim();
-  if (q) saveToHistory(q);
+  var qEl = document.getElementById('question');
+  var q = qEl ? qEl.value.trim() : '';
+  if (!q) {
+    if (qEl) { qEl.focus(); qEl.style.borderColor='#dc2626'; setTimeout(function(){ qEl.style.borderColor=''; }, 1500); }
+    displayError(LANG === 'vi' ? 'Vui lòng nhập câu hỏi trước khi gửi.' : 'Please enter a question first.');
+    return;
+  }
+  saveToHistory(q);
   showLoading(LANG === 'vi' ? '🤖 AI đang suy nghĩ...' : '🤖 AI is thinking...');
   try {
     const res = await fetch('/ask', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        student_id: document.getElementById('student').value,
-        subject: _currentSubject || document.getElementById('subject').value,
-        question: document.getElementById('question').value,
+        student_id: (document.getElementById('student') || {}).value || 'S001',
+        subject: _currentSubject || (document.getElementById('subject') || {}).value || 'general',
+        question: q,
         language: LANG
       })
     });
@@ -4311,7 +4317,7 @@ def pwa_manifest():
 def service_worker():
     from fastapi.responses import Response
     sw_code = r"""
-const CACHE_NAME = 'eduvision-v3';
+const CACHE_NAME = 'eduvision-v4';
 const CORE_ASSETS = [
   '/',
   '/privacy',
