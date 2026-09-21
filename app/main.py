@@ -3342,7 +3342,7 @@ async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: i
     import httpx as _hx
     async with _hx.AsyncClient(timeout=40) as client:
         resp = await client.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
             headers={"Content-Type": "application/json"},
             json={
                 "contents": [{"parts": [
@@ -3359,6 +3359,49 @@ async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: i
     err = data.get("error", {})
     err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
     raise HTTPException(status_code=502, detail=f"Gemini API error: {err_msg}")
+
+
+async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
+    """Call Groq Vision API (llama-4-scout-17b, free tier) as fallback."""
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY chưa được cấu hình")
+    b64 = base64.b64encode(img_bytes).decode()
+    data_url = f"data:{mime};base64,{b64}"
+    import httpx as _hx
+    async with _hx.AsyncClient(timeout=40) as client:
+        resp = await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+                "messages": [{"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                    {"type": "text", "text": prompt},
+                ]}],
+                "max_tokens": max_tokens,
+            },
+        )
+    data = resp.json()
+    choices = data.get("choices", [])
+    if choices:
+        return _strip_markdown(choices[0]["message"]["content"].strip())
+    err = data.get("error", {})
+    err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
+    raise HTTPException(status_code=502, detail=f"Groq Vision error: {err_msg}")
+
+
+async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> tuple[str, str]:
+    """Try Gemini first, fall back to Groq. Returns (text, model_name)."""
+    try:
+        result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
+        return result, "gemini-2.0-flash"
+    except Exception:
+        result = await _groq_vision(img_bytes, mime, prompt, max_tokens)
+        return result, "groq/llama-4-scout-17b"
 
 
 @app.post("/describe-image")
@@ -3410,14 +3453,15 @@ async def describe_image(
 
     max_tokens = 250 if is_quick else 800
     try:
-        description = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
+        description, model_used = await _vision_call(img_bytes, mime, prompt, max_tokens)
     except HTTPException:
         raise
     except Exception as exc:
         description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
+        model_used = "error"
 
     log_event("vision", "vision", file.filename or "image", description[:200])
-    return {"description": description, "model": "gemini-3.6-flash", "mode": mode}
+    return {"description": description, "model": model_used, "mode": mode}
 
 
 @app.post("/describe-image/followup")
@@ -3448,14 +3492,15 @@ async def describe_image_followup(
         )
 
     try:
-        answer = await _gemini_vision(img_bytes, mime, prompt, max_tokens=500)
+        answer, model_used = await _vision_call(img_bytes, mime, prompt, max_tokens=500)
     except HTTPException:
         raise
     except Exception as exc:
         answer = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
+        model_used = "error"
 
     log_event("vision", "followup", question[:80], answer[:200])
-    return {"answer": answer, "model": "gemini-3.6-flash"}
+    return {"answer": answer, "model": model_used}
 
 
 ## ── DEMO RESET ────────────────────────────────────────────────────────────────
