@@ -3358,7 +3358,9 @@ async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: i
         return _strip_markdown(candidates[0]["content"]["parts"][0]["text"].strip())
     err = data.get("error", {})
     err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
-    raise HTTPException(status_code=502, detail=f"Gemini API error: {err_msg}")
+    if "high demand" in err_msg or "experiencing" in err_msg:
+        raise Exception("Hệ thống AI đang bận, vui lòng thử lại sau vài giây.")
+    raise Exception(f"Gemini API error: {err_msg}")
 
 
 async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
@@ -3395,14 +3397,7 @@ async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
 
 
 async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> tuple[str, str]:
-    """Try Groq first (if key set), then Gemini. Returns (text, model_name)."""
-    groq_key = os.getenv("GROQ_API_KEY", "")
-    if groq_key:
-        try:
-            result = await _groq_vision(img_bytes, mime, prompt, max_tokens)
-            return result, "groq/llama-3.2-11b-vision"
-        except Exception as groq_err:
-            raise Exception(f"[GROQ] {getattr(groq_err, 'detail', str(groq_err))}")
+    """Call Gemini Vision. Returns (text, model_name)."""
     result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
     return result, "gemini-3.6-flash"
 
