@@ -2605,17 +2605,47 @@ async function changePassword() {
 })();
 
 // PWA Service Worker
-// Unregister any old service workers (they were caching stale JS)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs.forEach(function(reg) { reg.unregister(); });
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js').then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var newSW = reg.installing;
+        if (newSW) newSW.addEventListener('statechange', function() {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version available — update silently on next visit
+            newSW.postMessage({ action: 'skipWaiting' });
+          }
+        });
+      });
+    }).catch(function() {});
   });
-  caches.keys().then(function(keys) {
-    keys.forEach(function(k) { caches.delete(k); });
-  });
+}
+// PWA install prompt
+var _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _pwaPrompt = e;
+  var bar = document.getElementById('pwa-install-bar');
+  if (bar) bar.style.display = 'flex';
+});
+window.addEventListener('appinstalled', function() {
+  var bar = document.getElementById('pwa-install-bar');
+  if (bar) bar.style.display = 'none';
+  _pwaPrompt = null;
+});
+function installPWA() {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(function() { _pwaPrompt = null; });
 }
 </script>
 
+<!-- PWA INSTALL BAR -->
+<div id="pwa-install-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:#1e3a5f;color:#fff;padding:10px 16px;align-items:center;gap:10px;box-shadow:0 -2px 12px rgba(0,0,0,0.3)">
+  <span style="flex:1;font-size:14px;font-weight:600">📱 Cài EduVision AI lên điện thoại để dùng offline</span>
+  <button onclick="installPWA()" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px">Cài app</button>
+  <button onclick="document.getElementById('pwa-install-bar').style.display='none'" style="background:transparent;border:none;color:#93c5fd;font-size:20px;cursor:pointer;padding:0 4px" aria-label="Đóng">×</button>
+</div>
 <!-- LOGIN MODAL -->
 <!-- READING RULER -->
 <div id="reading-ruler" role="presentation" aria-hidden="true"></div>
@@ -4257,14 +4287,20 @@ def pwa_manifest():
         "name": "EduVision AI",
         "short_name": "EduVision",
         "description": "Trợ lý học tập AI cho học sinh khiếm thị",
-        "start_url": "/",
+        "start_url": "/?source=pwa",
         "display": "standalone",
         "background_color": "#f6f8fb",
         "theme_color": "#c41230",
         "lang": "vi",
+        "orientation": "portrait-primary",
         "icons": [
-            {"src": "/favicon.ico", "sizes": "any", "type": "image/x-icon"},
-            {"src": "https://eduvision-ai-nu.vercel.app/favicon.ico", "sizes": "192x192", "type": "image/x-icon"}
+            {"src": "/favicon.ico", "sizes": "any", "type": "image/x-icon", "purpose": "any"},
+            {"src": "/favicon.ico", "sizes": "192x192", "type": "image/x-icon", "purpose": "maskable"},
+            {"src": "/favicon.ico", "sizes": "512x512", "type": "image/x-icon", "purpose": "any"},
+        ],
+        "shortcuts": [
+            {"name": "Hỏi AI", "short_name": "Hỏi AI", "description": "Đặt câu hỏi toán học", "url": "/?tab=ask"},
+            {"name": "Đọc tài liệu", "short_name": "OCR", "description": "Chụp ảnh bài tập để đọc", "url": "/?tab=tools"},
         ],
         "categories": ["education", "accessibility"],
         "screenshots": []
