@@ -712,6 +712,15 @@ def web_demo() -> HTMLResponse:
     .speaking-badge.show{display:flex}
     .btn-stop-inline{background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer;margin-left:10px}
     .btn-stop-inline:hover{background:#b91c1c}
+    /* TTS control bar inside result card */
+    .result-tts-bar{display:none;align-items:center;gap:10px;background:#1e3a5f;border-radius:10px;padding:10px 14px;margin:8px 0 4px;border:1px solid #2563eb}
+    .result-tts-bar.show{display:flex}
+    .result-tts-bar .tts-label{color:#93c5fd;font-size:14px;font-weight:600;flex:1}
+    .result-tts-bar .tts-pause-btn{background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:15px;font-weight:700;cursor:pointer;min-width:110px;transition:background .15s}
+    .result-tts-bar .tts-pause-btn:hover{background:#1d4ed8}
+    .result-tts-bar .tts-pause-btn.paused{background:#15803d}
+    .result-tts-bar .tts-stop-btn{background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
+    .result-tts-bar .tts-stop-btn:hover{background:#991b1b}
     /* Vision mode selector */
     .vision-mode-bar{display:flex;gap:8px;margin-bottom:10px}
     .vision-mode-btn{border:2px solid var(--line);background:#fff;border-radius:8px;padding:7px 16px;font-size:14px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
@@ -1073,6 +1082,11 @@ def web_demo() -> HTMLResponse:
     <div class="result-panel tab-pane" id="pane-result">
       <div class="card">
         <h2 id="result-title">📋 Kết quả</h2>
+        <div class="result-tts-bar" id="result-tts-bar" role="toolbar" aria-label="Điều khiển đọc">
+          <span class="tts-label" id="result-tts-label">🔊 Đang đọc...</span>
+          <button class="tts-pause-btn" id="btn-pause-result" onclick="pauseResumeSpeech()" aria-label="Tạm dừng hoặc tiếp tục đọc">⏸ Dừng lại</button>
+          <button class="tts-stop-btn" onclick="stopSpeech(true)" aria-label="Dừng hẳn">⏹ Tắt</button>
+        </div>
         <div id="sr-status" aria-live="assertive" aria-atomic="true"
           style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
         <div id="result" role="log" aria-live="polite" aria-atomic="false"
@@ -1245,6 +1259,26 @@ function updateSpeakButton() {
   btn.setAttribute('aria-pressed', window.eduvisionIsSpeaking ? 'true' : 'false');
 }
 
+function _syncResultTtsBar(state) {
+  // state: 'speaking' | 'paused' | 'stopped'
+  var bar = document.getElementById('result-tts-bar');
+  var lbl = document.getElementById('result-tts-label');
+  var btn = document.getElementById('btn-pause-result');
+  if (!bar) return;
+  if (state === 'stopped') {
+    bar.classList.remove('show');
+  } else {
+    bar.classList.add('show');
+    if (state === 'paused') {
+      if (lbl) lbl.textContent = '⏸ Đã tạm dừng';
+      if (btn) { btn.textContent = '▶ Đọc tiếp'; btn.classList.add('paused'); }
+    } else {
+      if (lbl) lbl.textContent = '🔊 Đang đọc...';
+      if (btn) { btn.textContent = '⏸ Dừng lại'; btn.classList.remove('paused'); }
+    }
+  }
+}
+
 function stopSpeech(showMessage = true) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
@@ -1254,6 +1288,7 @@ function stopSpeech(showMessage = true) {
   if (badge) badge.classList.remove('show');
   var btnPR = document.getElementById('btn-pause-resume');
   if (btnPR) btnPR.textContent = '⏸ Tạm dừng';
+  _syncResultTtsBar('stopped');
   updateSpeakButton();
   if (showMessage) {
     const result = document.getElementById('result');
@@ -1271,11 +1306,13 @@ function pauseResumeSpeech() {
     if (btn) btn.textContent = '⏸ Tạm dừng';
     if (btnNav) { btnNav.textContent = '⏸ Dừng'; btnNav.style.background='#1d4ed8'; btnNav.style.borderColor='#1d4ed8'; }
     if (badge) { var sp = badge.querySelector('#speaking-text'); if (sp) sp.textContent = UI[LANG].speaking || 'Đang đọc...'; }
+    _syncResultTtsBar('speaking');
   } else {
     window.speechSynthesis.pause();
     if (btn) btn.textContent = '▶ Đọc tiếp';
     if (btnNav) { btnNav.textContent = '▶ Tiếp'; btnNav.style.background='#15803d'; btnNav.style.borderColor='#15803d'; }
     if (badge) { var sp = badge.querySelector('#speaking-text'); if (sp) sp.textContent = 'Đã tạm dừng'; }
+    _syncResultTtsBar('paused');
   }
 }
 
@@ -1320,6 +1357,7 @@ function speakText(text, lang) {
   utt.onstart = () => {
     window.eduvisionIsSpeaking = true;
     badge.classList.add('show');
+    _syncResultTtsBar('speaking');
     updateSpeakButton();
   };
   utt.onboundary = function(e) {
@@ -1329,6 +1367,7 @@ function speakText(text, lang) {
     window.eduvisionIsSpeaking = false;
     window.eduvisionCurrentUtterance = null;
     badge.classList.remove('show');
+    _syncResultTtsBar('stopped');
     updateSpeakButton();
     clearTTSHighlight();
   };
