@@ -4345,10 +4345,13 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
+  // Skip all non-GET (POST file uploads, API calls) — let browser handle directly
+  if (event.request.method !== 'GET') return;
+
   var url = new URL(event.request.url);
 
   // Network-first for API calls (ask, auth, ocr, tts)
-  if (['/ask', '/auth/', '/ocr', '/tts', '/stt', '/braille', '/profile', '/report'].some(function(p) {
+  if (['/ask', '/auth/', '/ocr', '/tts', '/stt', '/braille', '/profile', '/report', '/describe-image'].some(function(p) {
     return url.pathname.startsWith(p);
   })) {
     event.respondWith(
