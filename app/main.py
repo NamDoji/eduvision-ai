@@ -3342,7 +3342,7 @@ async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: i
     import httpx as _hx
     async with _hx.AsyncClient(timeout=40) as client:
         resp = await client.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
             headers={"Content-Type": "application/json"},
             json={
                 "contents": [{"parts": [
@@ -3399,7 +3399,7 @@ async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
 async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> tuple[str, str]:
     """Call Gemini Vision. Returns (text, model_name)."""
     result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
-    return result, "gemini-3.6-flash"
+    return result, "gemini-2.5-flash"
 
 
 @app.post("/describe-image")
