@@ -1103,6 +1103,7 @@ def web_demo() -> HTMLResponse:
         </div>
         <div class="sentence-nav" id="sentence-nav" style="display:none" role="navigation" aria-label="Điều hướng câu">
           <button onclick="prevSentence()" aria-label="Câu trước">⬅ Trước</button>
+          <button onclick="pauseResumeSpeech()" aria-label="Tạm dừng hoặc tiếp tục đọc" id="btn-pause-nav" style="background:#1d4ed8;color:#fff;border-color:#1d4ed8">⏸ Dừng</button>
           <button onclick="repeatSentence()" aria-label="Lặp lại câu này">🔄 Lặp</button>
           <button onclick="nextSentence()" aria-label="Câu tiếp theo">Tiếp ➡</button>
         </div>
@@ -1263,14 +1264,17 @@ function stopSpeech(showMessage = true) {
 function pauseResumeSpeech() {
   if (!window.speechSynthesis) return;
   var btn = document.getElementById('btn-pause-resume');
+  var btnNav = document.getElementById('btn-pause-nav');
   var badge = document.getElementById('speaking-badge');
   if (window.speechSynthesis.paused) {
     window.speechSynthesis.resume();
     if (btn) btn.textContent = '⏸ Tạm dừng';
+    if (btnNav) { btnNav.textContent = '⏸ Dừng'; btnNav.style.background='#1d4ed8'; btnNav.style.borderColor='#1d4ed8'; }
     if (badge) { var sp = badge.querySelector('#speaking-text'); if (sp) sp.textContent = UI[LANG].speaking || 'Đang đọc...'; }
   } else {
     window.speechSynthesis.pause();
     if (btn) btn.textContent = '▶ Đọc tiếp';
+    if (btnNav) { btnNav.textContent = '▶ Tiếp'; btnNav.style.background='#15803d'; btnNav.style.borderColor='#15803d'; }
     if (badge) { var sp = badge.querySelector('#speaking-text'); if (sp) sp.textContent = 'Đã tạm dừng'; }
   }
 }
