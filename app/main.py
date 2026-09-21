@@ -3395,7 +3395,8 @@ async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
 
 
 async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> tuple[str, str]:
-    """Try Groq first (reliable free tier), fall back to Gemini. Returns (text, model_name)."""
+    """Try Groq first (if key set), then Gemini with retry. Returns (text, model_name)."""
+    import asyncio
     groq_key = os.getenv("GROQ_API_KEY", "")
     if groq_key:
         try:
@@ -3403,8 +3404,16 @@ async def _vision_call(img_bytes: bytes, mime: str, prompt: str, max_tokens: int
             return result, "groq/llama-4-scout-17b"
         except Exception:
             pass
-    result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
-    return result, "gemini-3.6-flash"
+    last_err = "Vision API không khả dụng"
+    for attempt in range(3):
+        if attempt > 0:
+            await asyncio.sleep(2 ** attempt)
+        try:
+            result = await _gemini_vision(img_bytes, mime, prompt, max_tokens)
+            return result, "gemini-3.6-flash"
+        except Exception as e:
+            last_err = getattr(e, "detail", str(e))
+    raise Exception(last_err)
 
 
 @app.post("/describe-image")
@@ -3457,10 +3466,9 @@ async def describe_image(
     max_tokens = 250 if is_quick else 800
     try:
         description, model_used = await _vision_call(img_bytes, mime, prompt, max_tokens)
-    except HTTPException:
-        raise
     except Exception as exc:
-        description = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
+        detail = getattr(exc, "detail", str(exc)) or str(exc)
+        description = f"{'Lỗi' if language == 'vi' else 'Error'}: {detail}"
         model_used = "error"
 
     log_event("vision", "vision", file.filename or "image", description[:200])
@@ -3496,10 +3504,9 @@ async def describe_image_followup(
 
     try:
         answer, model_used = await _vision_call(img_bytes, mime, prompt, max_tokens=500)
-    except HTTPException:
-        raise
     except Exception as exc:
-        answer = f"{'Lỗi' if language == 'vi' else 'Error'}: {exc}"
+        detail = getattr(exc, "detail", str(exc)) or str(exc)
+        answer = f"{'Lỗi' if language == 'vi' else 'Error'}: {detail}"
         model_used = "error"
 
     log_event("vision", "followup", question[:80], answer[:200])
