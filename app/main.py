@@ -3338,33 +3338,45 @@ def _strip_markdown(text: str) -> str:
 
 
 async def _gemini_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
-    """Call Gemini Vision API and return plain-text response."""
+    """Call Gemini Vision API with retry on high-demand errors."""
+    import asyncio
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if not gemini_key:
-        raise HTTPException(status_code=503, detail="GEMINI_API_KEY chưa được cấu hình")
+        raise Exception("GEMINI_API_KEY chưa được cấu hình")
     b64 = base64.b64encode(img_bytes).decode()
     import httpx as _hx
-    async with _hx.AsyncClient(timeout=40) as client:
-        resp = await client.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
-            headers={"Content-Type": "application/json"},
-            json={
-                "contents": [{"parts": [
-                    {"inline_data": {"mime_type": mime, "data": b64}},
-                    {"text": prompt},
-                ]}],
-                "generationConfig": {"maxOutputTokens": max_tokens},
-            },
-        )
-    data = resp.json()
-    candidates = data.get("candidates", [])
-    if candidates:
-        return _strip_markdown(candidates[0]["content"]["parts"][0]["text"].strip())
-    err = data.get("error", {})
-    err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
-    if "high demand" in err_msg or "experiencing" in err_msg:
-        raise Exception("Hệ thống AI đang bận, vui lòng thử lại sau vài giây.")
-    raise Exception(f"Gemini API error: {err_msg}")
+    last_err = "Vision AI không khả dụng"
+    for attempt in range(3):
+        if attempt > 0:
+            await asyncio.sleep(attempt * 2)
+        try:
+            async with _hx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}",
+                    headers={"Content-Type": "application/json"},
+                    json={
+                        "contents": [{"parts": [
+                            {"inline_data": {"mime_type": mime, "data": b64}},
+                            {"text": prompt},
+                        ]}],
+                        "generationConfig": {"maxOutputTokens": max_tokens},
+                    },
+                )
+            data = resp.json()
+            candidates = data.get("candidates", [])
+            if candidates:
+                return _strip_markdown(candidates[0]["content"]["parts"][0]["text"].strip())
+            err = data.get("error", {})
+            err_msg = err.get("message", str(data)) if isinstance(err, dict) else str(err)
+            if "high demand" in err_msg or "experiencing" in err_msg:
+                last_err = "Hệ thống AI đang bận, đang thử lại..." if attempt < 2 else "Hệ thống AI đang bận, vui lòng thử lại sau 1 phút."
+                continue
+            raise Exception(f"Gemini: {err_msg}")
+        except Exception as e:
+            if "Gemini:" in str(e):
+                raise
+            last_err = str(e) or last_err
+    raise Exception(last_err)
 
 
 async def _groq_vision(img_bytes: bytes, mime: str, prompt: str, max_tokens: int = 800) -> str:
